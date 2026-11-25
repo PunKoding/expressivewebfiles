@@ -1,4 +1,4 @@
-# Expressive Web Files (`com.fotospixel.transfer`)
+# Expressive Web Files
 
 ![Android API](https://img.shields.io/badge/Android-API%2026%E2%80%9335%2B%20(8.0%E2%80%9316%2B)-3DDC84?logo=android&logoColor=white)
 ![Pure Java](https://img.shields.io/badge/Java-100%25%20Java%20(Sin%20dependencias)-ED8B00?logo=openjdk&logoColor=white)

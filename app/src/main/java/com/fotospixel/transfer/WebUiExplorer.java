@@ -234,6 +234,23 @@ public final class WebUiExplorer {
         "    </div>\n" +
         "    <div id=\"actList\" class=\"act-sheet-list\"></div>\n" +
         "  </div>\n" +
+        "</div>\n" +
+        "\n" +
+        "<div class=\"modal\" id=\"multiDlAlertModal\" onclick=\"if(event.target===this)acceptMultiDlAlert()\">\n" +
+        "  <div class=\"modal-box\" style=\"max-width:460px\">\n" +
+        "    <div class=\"modal-head\">\n" +
+        "      <h2>Permite la descarga de varios archivos</h2>\n" +
+        "    </div>\n" +
+        "    <p style=\"margin:0 0 12px;font-size:14px;line-height:1.5;color:var(--md-sys-color-on-surface)\">\n" +
+        "      Vas a descargar varios archivos a la vez. Es muy habitual que el navegador bloquee las descargas múltiples la primera vez o no muestre ningún aviso visible.\n" +
+        "    </p>\n" +
+        "    <p style=\"margin:0 0 18px;font-size:13px;line-height:1.45;color:var(--md-sys-color-on-surface-variant)\">\n" +
+        "      Si ves una ventana del navegador o un pequeño icono de descarga bloqueada en la barra de direcciones, pulsa <b>Permitir</b> para recibir todos los archivos.\n" +
+        "    </p>\n" +
+        "    <div style=\"display:flex;justify-content:flex-end;gap:8px\">\n" +
+        "      <button class=\"btn btn-primary\" onclick=\"acceptMultiDlAlert()\">Aceptar</button>\n" +
+        "    </div>\n" +
+        "  </div>\n" +
         "</div>\n";
 
     public static final String EXPLORER_JS_1 =
@@ -618,6 +635,37 @@ public final class WebUiExplorer {
         "  if (r.ok && d.ok) { showExplorerNotice('Creado: /' + d.path + ' (' + fmtBytes(d.bytes) + ', ' + d.files + ' archivos)'); browse(currentDir); }\n" +
         "  else { showExplorerNotice('Error: ' + (d.error || 'Fallo al comprimir')); }\n" +
         "}\n" +
+        "let multiDlAlertShown = false;\n" +
+        "let pendingMultiDl = null;\n" +
+        "function hasMultiDlCookie() {\n" +
+        "  return (document.cookie || '').split(';').some(c => c.trim().startsWith('fp_multidl_ack=1'));\n" +
+        "}\n" +
+        "function setMultiDlCookie() {\n" +
+        "  multiDlAlertShown = true;\n" +
+        "  document.cookie = 'fp_multidl_ack=1; path=/; max-age=31536000; SameSite=Lax';\n" +
+        "}\n" +
+        "function runFilesDownload(files, dirCount) {\n" +
+        "  showExplorerNotice('Descargando ' + files.length + (files.length === 1 ? ' archivo' : ' archivos') + (dirCount > 0 ? ' (' + dirCount + ' carpeta/s omitida/s; usa ZIP para carpetas)' : '') + '...');\n" +
+        "  files.forEach((fp, idx) => {\n" +
+        "    setTimeout(() => {\n" +
+        "      const ifr = document.createElement('iframe');\n" +
+        "      ifr.style.display = 'none';\n" +
+        "      ifr.src = '/api/download?path=' + encodeURIComponent(fp);\n" +
+        "      document.body.appendChild(ifr);\n" +
+        "      setTimeout(() => ifr.remove(), 60000);\n" +
+        "    }, idx * 250);\n" +
+        "  });\n" +
+        "}\n" +
+        "function acceptMultiDlAlert() {\n" +
+        "  setMultiDlCookie();\n" +
+        "  const m = document.getElementById('multiDlAlertModal');\n" +
+        "  if (m) m.classList.remove('open');\n" +
+        "  if (pendingMultiDl) {\n" +
+        "    const d = pendingMultiDl;\n" +
+        "    pendingMultiDl = null;\n" +
+        "    runFilesDownload(d.files, d.dirCount);\n" +
+        "  }\n" +
+        "}\n" +
         "function downloadSelected() {\n" +
         "  if (selectedPaths.size === 0) return;\n" +
         "  const byPath = new Map();\n" +
@@ -636,16 +684,13 @@ public final class WebUiExplorer {
         "    showExplorerNotice('Solo hay carpetas seleccionadas; usa ZIP para descargar carpetas.');\n" +
         "    return;\n" +
         "  }\n" +
-        "  showExplorerNotice('Descargando ' + files.length + (files.length === 1 ? ' archivo' : ' archivos') + (dirCount > 0 ? ' (' + dirCount + ' carpeta/s omitida/s; usa ZIP para carpetas)' : '') + '...');\n" +
-        "  files.forEach((fp, idx) => {\n" +
-        "    setTimeout(() => {\n" +
-        "      const ifr = document.createElement('iframe');\n" +
-        "      ifr.style.display = 'none';\n" +
-        "      ifr.src = '/api/download?path=' + encodeURIComponent(fp);\n" +
-        "      document.body.appendChild(ifr);\n" +
-        "      setTimeout(() => ifr.remove(), 60000);\n" +
-        "    }, idx * 250);\n" +
-        "  });\n" +
+        "  if (files.length > 1 && !multiDlAlertShown && !hasMultiDlCookie()) {\n" +
+        "    setMultiDlCookie();\n" +
+        "    pendingMultiDl = { files: files, dirCount: dirCount };\n" +
+        "    const m = document.getElementById('multiDlAlertModal');\n" +
+        "    if (m) { m.classList.add('open'); return; }\n" +
+        "  }\n" +
+        "  runFilesDownload(files, dirCount);\n" +
         "}\n" +
         "async function packSelected(fmt) {\n" +
         "  if (selectedPaths.size === 0) return;\n" +
