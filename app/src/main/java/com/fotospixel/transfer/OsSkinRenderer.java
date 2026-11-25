@@ -615,7 +615,8 @@ final class OsSkinRenderer {
         }
 
         TextView tv = new TextView(ctx);
-        tv.setText(skin.uppercaseSectionHeaders ? text.toUpperCase(Locale.getDefault()) : text);
+        String trText = I18n.tr(text);
+        tv.setText(skin.uppercaseSectionHeaders ? trText.toUpperCase(Locale.getDefault()) : trText);
         tv.setTextColor(id == OsDesignSystem.SkinId.MATERIAL_ANDROID_9 ? semanticTint : theme.onSurface);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, skin.uppercaseSectionHeaders ? 13f : 15.5f);
         tv.setTypeface(skin.sectionTypeface());

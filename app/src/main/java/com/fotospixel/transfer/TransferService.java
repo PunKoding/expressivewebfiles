@@ -670,9 +670,9 @@ public final class TransferService extends Service {
         }
 
         Notification.Builder b = new Notification.Builder(this, CHANNEL_ID)
-                .setContentTitle(title)
-                .setContentText(text)
-                .setSubText(subText)
+                .setContentTitle(I18n.tr(title))
+                .setContentText(I18n.tr(text))
+                .setSubText(I18n.tr(subText))
                 .setSmallIcon(trackerMode == 3 ? android.R.drawable.ic_menu_delete : android.R.drawable.stat_sys_upload)
                 .setColor(accentColor)
                 .setOngoing(true)
@@ -691,16 +691,16 @@ public final class TransferService extends Service {
             setRequestPromotedOngoing(b, true);
             setShortCriticalText(b, chipText);
             if (primaryTx == null && delOp != null) {
-                b.addAction(new Notification.Action.Builder(stopActionIcon, "Cancelar borrado", cancelOpPi).build());
+                b.addAction(new Notification.Action.Builder(stopActionIcon, I18n.tr("Cancelar borrado"), cancelOpPi).build());
             }
-            b.addAction(new Notification.Action.Builder(powerActionIcon, "Detener", stopPi).build());
+            b.addAction(new Notification.Action.Builder(powerActionIcon, I18n.tr("Detener"), stopPi).build());
         } else {
             // Standard rich Android notification for OS versions without Live Activities (API 26–35)
             b.setLargeIcon(createTrackerBitmap(trackerMode, accentColor, iconFgColor));
             Notification.BigTextStyle big = new Notification.BigTextStyle();
             if (primaryTx != null) {
                 boolean isUpload = TransferStats.DIR_UPLOAD.equals(primaryTx.direction);
-                big.setBigContentTitle((isUpload ? "Subiendo: " : "Descargando: ") + primaryTx.fileName);
+                big.setBigContentTitle(I18n.tr((isUpload ? "Subiendo: " : "Descargando: ") + primaryTx.fileName));
                 StringBuilder body = new StringBuilder();
                 body.append("Archivo: ").append(primaryTx.fileName).append('\n');
                 body.append("Ruta: ").append(primaryFullPath).append('\n');
@@ -724,30 +724,30 @@ public final class TransferService extends Service {
                         body.append("\n+").append(actives.size() - 4).append(" más");
                     }
                 }
-                big.bigText(body.toString());
+                big.bigText(I18n.tr(body.toString()));
                 b.setProgress(100, progressPct, indeterminate);
-                b.addAction(new Notification.Action.Builder(stopActionIcon, "Detener transferencia", cancelPi).build());
-                b.addAction(new Notification.Action.Builder(powerActionIcon, "Apagar servidor", stopPi).build());
+                b.addAction(new Notification.Action.Builder(stopActionIcon, I18n.tr("Detener transferencia"), cancelPi).build());
+                b.addAction(new Notification.Action.Builder(powerActionIcon, I18n.tr("Apagar servidor"), stopPi).build());
             } else if (delOp != null) {
-                big.setBigContentTitle("Eliminando: " + delOp.title);
+                big.setBigContentTitle(I18n.tr("Eliminando: " + delOp.title));
                 StringBuilder body = new StringBuilder();
                 body.append("Borrando ahora: ").append(delOp.currentItem).append('\n');
                 body.append("Progreso: ").append(subText);
                 if (delOp.destLabel != null && !delOp.destLabel.isEmpty()) {
                     body.append('\n').append("Ubicación: ").append(delOp.destLabel);
                 }
-                big.bigText(body.toString());
+                big.bigText(I18n.tr(body.toString()));
                 b.setProgress(100, progressPct, indeterminate);
-                b.addAction(new Notification.Action.Builder(stopActionIcon, "Cancelar borrado", cancelOpPi).build());
-                b.addAction(new Notification.Action.Builder(powerActionIcon, "Apagar servidor", stopPi).build());
+                b.addAction(new Notification.Action.Builder(stopActionIcon, I18n.tr("Cancelar borrado"), cancelOpPi).build());
+                b.addAction(new Notification.Action.Builder(powerActionIcon, I18n.tr("Apagar servidor"), stopPi).build());
             } else {
                 String u = stats.getAuthUser();
                 int activePort = stats.getServerPort();
                 String host = stats.getLocalHost();
                 String friendlyUrl = LocalDnsResponder.formatHttpUrl(host, activePort);
                 String ipUrl = LocalDnsResponder.formatHttpUrl(ip, activePort);
-                b.setContentTitle("Expressive Web Files · En línea");
-                big.setBigContentTitle("Expressive Web Files · Servidor activo");
+                b.setContentTitle(I18n.tr("Expressive Web Files · En línea"));
+                big.setBigContentTitle(I18n.tr("Expressive Web Files · Servidor activo"));
                 StringBuilder body = new StringBuilder();
                 if (!friendlyUrl.isEmpty()) {
                     body.append("Portal Web: ").append(friendlyUrl).append('\n');
@@ -759,8 +759,8 @@ public final class TransferService extends Service {
                 body.append("Sesión: ↑ ").append(TransferStats.formatBytes(stats.getTotalUploadBytes()))
                         .append(" · ↓ ").append(TransferStats.formatBytes(stats.getTotalDownloadBytes())).append('\n');
                 body.append("Listo para recibir carpetas y archivos.");
-                big.bigText(body.toString());
-                b.addAction(new Notification.Action.Builder(powerActionIcon, "Detener servidor", stopPi).build());
+                big.bigText(I18n.tr(body.toString()));
+                b.addAction(new Notification.Action.Builder(powerActionIcon, I18n.tr("Detener servidor"), stopPi).build());
             }
             b.setStyle(big);
         }

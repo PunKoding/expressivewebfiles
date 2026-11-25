@@ -403,7 +403,7 @@ public class SunburstChartView extends View {
 
         if (focused != null) {
             float maxTextW = hubR * 1.62f;
-            String label = focused.name != null ? focused.name : "Almacenamiento";
+            String label = focused.name != null ? focused.name : I18n.tr("Almacenamiento");
             CharSequence ellipLabel = TextUtils.ellipsize(label, titlePaint, maxTextW, TextUtils.TruncateAt.END);
             String sizeText = TransferStats.formatBytes(focused.size);
             boolean canZoomOut = focused != root && focused.parent != null;
@@ -411,7 +411,7 @@ public class SunburstChartView extends View {
             if (canZoomOut) {
                 canvas.drawText(ellipLabel, 0, ellipLabel.length(), cx, cy - dp(10), titlePaint);
                 canvas.drawText(sizeText, cx, cy + dp(9), sizePaint);
-                canvas.drawText("↑ Subir", cx, cy + dp(25), cuePaint);
+                canvas.drawText("↑ " + I18n.tr("Subir"), cx, cy + dp(25), cuePaint);
             } else {
                 canvas.drawText(ellipLabel, 0, ellipLabel.length(), cx, cy - dp(3), titlePaint);
                 canvas.drawText(sizeText, cx, cy + dp(16), sizePaint);

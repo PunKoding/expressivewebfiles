@@ -90,6 +90,7 @@ public final class MainActivity extends Activity {
 
     private final TransferStats stats = TransferStats.getInstance();
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
+    private View rootContentView;
     private final List<View> entranceCards = new ArrayList<>();
 
     private int activeTabIndex = 0; // 0 = Servidor, 1 = Archivos, 2 = Almacenamiento, 3 = Ajustes
@@ -463,7 +464,9 @@ public final class MainActivity extends Activity {
 
         buildBottomNavBar(outer, root, pad);
 
+        rootContentView = outer;
         setContentView(outer);
+        I18n.translateViewTree(rootContentView);
     }
 
     private void buildBottomNavBar(final FrameLayout outer, final LinearLayout root, final int pad) {
@@ -1403,6 +1406,7 @@ public final class MainActivity extends Activity {
             tail.setPadding(0, dp(6), 0, dp(4));
             storageListContainer.addView(tail);
         }
+        I18n.translateViewTree(storageTabView);
     }
 
     private void toggleStorageCollectorNode(StorageAnalyzer.Node node) {
@@ -4448,7 +4452,7 @@ public final class MainActivity extends Activity {
         OsSkinRenderer.maybeAddBottomSheetHandle(this, box, skin, theme);
 
         TextView t = new TextView(this);
-        t.setText(title);
+        t.setText(I18n.tr(title));
         t.setTextColor(theme.onSurface);
         t.setTypeface(skin.titleTypeface());
         t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
@@ -4458,7 +4462,7 @@ public final class MainActivity extends Activity {
 
         if (subtitle != null && !subtitle.isEmpty()) {
             TextView s = new TextView(this);
-            s.setText(subtitle);
+            s.setText(I18n.tr(subtitle));
             s.setTextColor(theme.onSurfaceVariant);
             s.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             s.setPadding(0, dp(4), 0, dp(12));
@@ -4472,6 +4476,7 @@ public final class MainActivity extends Activity {
         outer.addView(sv, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT));
         d.setContentView(outer);
+        d.setOnShowListener(dlg -> I18n.translateViewTree(outer));
 
         Window win = d.getWindow();
         if (win != null) {
@@ -4629,7 +4634,7 @@ public final class MainActivity extends Activity {
 
     private TextView createSmallLabel(String text) {
         TextView tv = new TextView(this);
-        tv.setText(text);
+        tv.setText(I18n.tr(text));
         tv.setTextColor(theme.onSurfaceVariant);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         tv.setTypeface(Typeface.DEFAULT_BOLD);
@@ -4640,7 +4645,7 @@ public final class MainActivity extends Activity {
     private EditText createExpressiveEditText(String initial, String hint) {
         EditText et = new EditText(this);
         et.setText(initial);
-        et.setHint(hint);
+        et.setHint(I18n.tr(hint));
         et.setHintTextColor(ThemeTokens.withAlpha(theme.onSurfaceVariant, 130));
         et.setTextColor(theme.onSurface);
         et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
@@ -4654,7 +4659,7 @@ public final class MainActivity extends Activity {
 
     private Button createIconPillButton(String label, int iconRes, int fillColor, int textColor) {
         Button b = new Button(this);
-        b.setText(label);
+        b.setText(I18n.tr(label));
         b.setAllCaps(skin.uppercaseButtons);
         b.setTextColor(textColor);
         b.setTypeface(skin.bodyMediumTypeface());
@@ -4919,6 +4924,7 @@ public final class MainActivity extends Activity {
                 recentContainer.addView(buildRecentRow(recents.get(i), tf));
             }
         }
+        I18n.translateViewTree(rootContentView);
     }
 
     private void syncActiveTransferViews(List<TransferStats.ActiveTransfer> actives) {

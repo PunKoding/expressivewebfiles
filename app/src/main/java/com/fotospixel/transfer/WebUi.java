@@ -1177,6 +1177,7 @@ public final class WebUi {
             + WebUiExplorer.EXPLORER_JS_1.length()
             + WebUiExplorer.EXPLORER_JS_2.length()
             + WebUiStorage.STORAGE_JS.length()
+            + WebUiI18n.I18N_JS.length()
             + HTML_TAIL.length())
             .append(HTML_HEAD_CSS)
             .append(HTML_BODY_HTML)
@@ -1184,6 +1185,7 @@ public final class WebUi {
             .append(WebUiExplorer.EXPLORER_JS_1)
             .append(WebUiExplorer.EXPLORER_JS_2)
             .append(WebUiStorage.STORAGE_JS)
+            .append(WebUiI18n.I18N_JS)
             .append(HTML_TAIL)
             .toString();
 }
