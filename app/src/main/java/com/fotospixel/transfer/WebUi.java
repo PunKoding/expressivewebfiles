@@ -475,6 +475,7 @@ public final class WebUi {
         "      <div class=\"sub\" style=\"margin-bottom:16px\">Puedes cambiar el usuario y la contraseña desde la pestaña <b>Ajustes</b> de la app en tu teléfono.</div>\n" +
         "      <button class=\"btn btn-danger\" id=\"logoutBtn\" onclick=\"doLogout()\">" + SVG_STOP + " Cerrar sesión</button>\n" +
         "    </div>\n" +
+        "    <div class=\"sub\" id=\"webVersionFooter\" style=\"text-align:center;margin:10px 0 18px;opacity:.75\">Expressive Web Files</div>\n" +
         "  </div>\n" +
         "\n" +
         "  <div class=\"floating-nav\">\n" +
@@ -1106,6 +1107,7 @@ public final class WebUi {
         "    const urlStr = 'http://' + s.ip + ':' + s.port;\n" +
         "    document.getElementById('devInfo').textContent = s.deviceModel + ' · ' + urlStr;\n" +
         "    document.getElementById('settingsUrl').textContent = urlStr;\n" +
+        "    if (s.appVersion) document.getElementById('webVersionFooter').textContent = 'Expressive Web Files · v' + s.appVersion + ' (build ' + (s.appVersionCode || '') + ')';\n" +
         "    const pill = document.getElementById('connPill');\n" +
         "    pill.classList.toggle('offline', !s.serverRunning);\n" +
         "    document.getElementById('connLabel').textContent = s.serverRunning ? 'En línea' : 'Detenido';\n" +

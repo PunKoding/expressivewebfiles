@@ -234,6 +234,10 @@ public final class MainActivity extends Activity {
     private TextView permStatusText;
     private EditText userEdit;
     private EditText passEdit;
+    private TextView updateStatusText;
+    private Button checkUpdateBtn;
+    private Button autoUpdateToggleBtn;
+    private final ExecutorService updateExecutor = Executors.newSingleThreadExecutor();
 
     private final Runnable refreshRunnable = new Runnable() {
         @Override
@@ -260,6 +264,9 @@ public final class MainActivity extends Activity {
                 && TransferService.isServerDesiredRunning(this)
                 && !stats.isServerRunning()) {
             startTransferService(TransferService.ACTION_START);
+        }
+        if (savedInstanceState == null && AppUpdater.shouldAutoCheck(this)) {
+            uiHandler.postDelayed(() -> checkForUpdates(true), 2500L);
         }
     }
 
@@ -309,6 +316,7 @@ public final class MainActivity extends Activity {
         storageScanExecutor.shutdownNow();
         zipExecutor.shutdownNow();
         fileBgExecutor.shutdownNow();
+        updateExecutor.shutdownNow();
         super.onDestroy();
     }
 
@@ -1736,6 +1744,275 @@ public final class MainActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
         pickSkinBtn.setOnClickListener(v -> showDesignSystemPickerDialog());
         designCard.addView(pickSkinBtn);
+
+        // About & App Version Card (always at the bottom of Ajustes)
+        LinearLayout aboutCard = createExpressiveCard(parent, theme.surfaceContainerLow, 28);
+        OsSkinRenderer.addSectionHeader(this, parent, aboutCard, "Acerca de", R.drawable.ic_m3_brand, theme.primary, skin, theme, true);
+
+        TextView verTitle = new TextView(this);
+        verTitle.setText("Expressive Web Files · v" + AppVersion.NAME);
+        verTitle.setTextColor(theme.onSurface);
+        verTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        verTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        aboutCard.addView(verTitle);
+
+        TextView verMeta = new TextView(this);
+        verMeta.setText("Compilación " + AppVersion.CODE + " · " + getPackageName());
+        verMeta.setTextColor(theme.onSurfaceVariant);
+        verMeta.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        verMeta.setPadding(0, dp(4), 0, 0);
+        aboutCard.addView(verMeta);
+
+        TextView verScheme = new TextView(this);
+        verScheme.setText("Versionado: +0.0.1 correcciones · +0.1 nuevas funciones");
+        verScheme.setTextColor(theme.onSurfaceVariant);
+        verScheme.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        verScheme.setAlpha(0.85f);
+        verScheme.setPadding(0, dp(6), 0, dp(10));
+        aboutCard.addView(verScheme);
+
+        updateStatusText = new TextView(this);
+        boolean autoUpd = AppUpdater.isAutoCheckEnabled(this);
+        updateStatusText.setText("Comprobación automática: " + (autoUpd ? "Activada" : "Desactivada") + " · GitHub Releases");
+        updateStatusText.setTextColor(theme.onSurfaceVariant);
+        updateStatusText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        updateStatusText.setPadding(0, 0, 0, dp(10));
+        aboutCard.addView(updateStatusText);
+
+        checkUpdateBtn = createIconPillButton(
+                "Buscar actualizaciones", R.drawable.ic_m3_refresh, theme.primaryContainer, theme.onPrimaryContainer);
+        LinearLayout.LayoutParams cubLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
+        cubLp.bottomMargin = dp(8);
+        checkUpdateBtn.setLayoutParams(cubLp);
+        checkUpdateBtn.setOnClickListener(v -> checkForUpdates(false));
+        aboutCard.addView(checkUpdateBtn);
+
+        autoUpdateToggleBtn = createIconPillButton(
+                autoUpd ? "Auto-actualizar: Activado" : "Auto-actualizar: Desactivado",
+                R.drawable.ic_m3_tune, theme.surfaceContainerHighest, theme.onSurface);
+        autoUpdateToggleBtn.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(42)));
+        autoUpdateToggleBtn.setOnClickListener(v -> {
+            boolean next = !AppUpdater.isAutoCheckEnabled(this);
+            AppUpdater.setAutoCheckEnabled(this, next);
+            autoUpdateToggleBtn.setText(next ? "Auto-actualizar: Activado" : "Auto-actualizar: Desactivado");
+            updateStatusText.setText("Comprobación automática: " + (next ? "Activada" : "Desactivada") + " · GitHub Releases");
+            Toast.makeText(this,
+                    next ? "Comprobación automática activada" : "Comprobación automática desactivada",
+                    Toast.LENGTH_SHORT).show();
+        });
+        aboutCard.addView(autoUpdateToggleBtn);
+    }
+
+    private void checkForUpdates(final boolean silent) {
+        if (!silent && checkUpdateBtn != null) {
+            checkUpdateBtn.setEnabled(false);
+            checkUpdateBtn.setText("Comprobando GitHub...");
+        }
+        updateExecutor.execute(() -> {
+            final AppUpdater.CheckResult res = AppUpdater.checkLatestRelease(MainActivity.this);
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (checkUpdateBtn != null) {
+                    checkUpdateBtn.setEnabled(true);
+                    checkUpdateBtn.setText("Buscar actualizaciones");
+                }
+                switch (res.status) {
+                    case UPDATE_AVAILABLE:
+                        if (silent && res.release.versionName.equals(AppUpdater.getSkippedVersion(MainActivity.this))) {
+                            return;
+                        }
+                        if (updateStatusText != null) {
+                            updateStatusText.setText("Nueva versión disponible: v" + res.release.versionName);
+                        }
+                        showUpdateAvailableDialog(res.release);
+                        break;
+                    case UP_TO_DATE:
+                        if (updateStatusText != null) {
+                            updateStatusText.setText("Al día · Última versión v" + AppVersion.NAME);
+                        }
+                        if (!silent) {
+                            Toast.makeText(MainActivity.this,
+                                    "Ya tienes la última versión (v" + AppVersion.NAME + ")",
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                        break;
+                    case NO_RELEASE:
+                        if (updateStatusText != null) {
+                            updateStatusText.setText(res.message);
+                        }
+                        if (!silent) {
+                            Toast.makeText(MainActivity.this, res.message, Toast.LENGTH_LONG).show();
+                        }
+                        break;
+                    default:
+                        if (!silent) {
+                            if (updateStatusText != null) {
+                                updateStatusText.setText(res.message);
+                            }
+                            Toast.makeText(MainActivity.this, res.message, Toast.LENGTH_LONG).show();
+                        }
+                        break;
+                }
+            });
+        });
+    }
+
+    private void showUpdateAvailableDialog(final AppUpdater.ReleaseInfo info) {
+        final Dialog d = new Dialog(this);
+        String sizePart = info.apkSize > 0 ? (" · " + TransferStats.formatBytes(info.apkSize)) : "";
+        LinearLayout box = showExpressiveModal(
+                d,
+                "Actualización v" + info.versionName,
+                "Instalada: v" + AppVersion.NAME + sizePart);
+
+        ScrollView notesScroll = new ScrollView(this);
+        LinearLayout.LayoutParams nslp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(150));
+        nslp.bottomMargin = dp(12);
+        notesScroll.setLayoutParams(nslp);
+
+        TextView notesView = new TextView(this);
+        String bodyText = (info.changelog == null || info.changelog.isEmpty())
+                ? "Mejoras y correcciones en esta versión."
+                : info.changelog;
+        notesView.setText(bodyText);
+        notesView.setTextColor(theme.onSurfaceVariant);
+        notesView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+        notesView.setPadding(dp(2), dp(2), dp(2), dp(2));
+        notesScroll.addView(notesView);
+        box.addView(notesScroll);
+
+        final ProgressBar dlBar = createExpressiveProgressBar(theme.primary, theme.surfaceContainerHighest, 10);
+        LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(10));
+        barLp.bottomMargin = dp(6);
+        dlBar.setLayoutParams(barLp);
+        dlBar.setMax(100);
+        dlBar.setVisibility(View.GONE);
+        box.addView(dlBar);
+
+        final TextView dlText = new TextView(this);
+        dlText.setTextColor(theme.onSurfaceVariant);
+        dlText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        dlText.setPadding(0, 0, 0, dp(10));
+        dlText.setVisibility(View.GONE);
+        box.addView(dlText);
+
+        final AtomicBoolean cancelled = new AtomicBoolean(false);
+        final boolean[] downloading = new boolean[]{false};
+        final File[] readyApk = new File[]{null};
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+
+        final Button laterBtn = createIconPillButton("Más tarde", 0, theme.secondaryContainer, theme.onSecondaryContainer);
+        laterBtn.setCompoundDrawablesRelative(null, null, null, null);
+        LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams(0, dp(44), 1f);
+        llp.rightMargin = dp(6);
+        laterBtn.setLayoutParams(llp);
+
+        final Button installBtn = createIconPillButton("Descargar e instalar", R.drawable.ic_m3_download, theme.primary, theme.onPrimary);
+        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(0, dp(44), 1.4f);
+        ilp.leftMargin = dp(6);
+        installBtn.setLayoutParams(ilp);
+
+        laterBtn.setOnClickListener(v -> {
+            if (downloading[0]) {
+                cancelled.set(true);
+                dlText.setText("Cancelando descarga...");
+            } else {
+                AppUpdater.markSkippedVersion(MainActivity.this, info.versionName);
+                d.dismiss();
+            }
+        });
+
+        installBtn.setOnClickListener(v -> {
+            if (readyApk[0] != null && readyApk[0].isFile()) {
+                AppUpdater.InstallResult ir = AppUpdater.installApk(MainActivity.this, readyApk[0]);
+                if (ir == AppUpdater.InstallResult.SESSION_COMMITTED) {
+                    d.dismiss();
+                } else if (ir == AppUpdater.InstallResult.NEEDS_PERMISSION) {
+                    dlText.setVisibility(View.VISIBLE);
+                    dlText.setText("Concede el permiso de instalar apps desconocidas y pulsa «Instalar ahora»");
+                } else {
+                    Toast.makeText(MainActivity.this, "No se pudo iniciar la instalación", Toast.LENGTH_LONG).show();
+                }
+                return;
+            }
+            if (downloading[0]) return;
+            downloading[0] = true;
+            cancelled.set(false);
+            installBtn.setEnabled(false);
+            installBtn.setText("Descargando...");
+            laterBtn.setText("Cancelar");
+            dlBar.setVisibility(View.VISIBLE);
+            dlBar.setProgress(0);
+            dlText.setVisibility(View.VISIBLE);
+            dlText.setText("Conectando con GitHub Releases...");
+
+            updateExecutor.execute(() -> {
+                try {
+                    final long[] lastUiUpdate = new long[]{0L};
+                    File apk = AppUpdater.downloadApk(MainActivity.this, info, (done, total) -> {
+                        long now = SystemClock.uptimeMillis();
+                        if (now - lastUiUpdate[0] < 120L && done < total) return;
+                        lastUiUpdate[0] = now;
+                        runOnUiThread(() -> {
+                            if (!d.isShowing()) return;
+                            int pct = total > 0 ? (int) Math.min(100L, (done * 100L) / total) : 0;
+                            dlBar.setProgress(pct);
+                            String progressLabel = total > 0
+                                    ? ("Descargando... " + pct + "% (" + TransferStats.formatBytes(done) + " / " + TransferStats.formatBytes(total) + ")")
+                                    : ("Descargando... " + TransferStats.formatBytes(done));
+                            dlText.setText(progressLabel);
+                        });
+                    }, cancelled);
+
+                    runOnUiThread(() -> {
+                        downloading[0] = false;
+                        if (!d.isShowing()) return;
+                        readyApk[0] = apk;
+                        dlBar.setProgress(100);
+                        AppUpdater.InstallResult ir = AppUpdater.installApk(MainActivity.this, apk);
+                        if (ir == AppUpdater.InstallResult.SESSION_COMMITTED) {
+                            d.dismiss();
+                        } else if (ir == AppUpdater.InstallResult.NEEDS_PERMISSION) {
+                            installBtn.setEnabled(true);
+                            installBtn.setText("Instalar ahora");
+                            laterBtn.setText("Más tarde");
+                            dlText.setText("Concede el permiso de instalar apps desconocidas y pulsa «Instalar ahora»");
+                        } else {
+                            installBtn.setEnabled(true);
+                            installBtn.setText("Reintentar");
+                            laterBtn.setText("Cerrar");
+                            dlText.setText("Error al preparar el instalador de Android");
+                        }
+                    });
+                } catch (Exception ex) {
+                    runOnUiThread(() -> {
+                        downloading[0] = false;
+                        if (!d.isShowing()) return;
+                        installBtn.setEnabled(true);
+                        installBtn.setText("Descargar e instalar");
+                        laterBtn.setText("Más tarde");
+                        dlBar.setVisibility(View.GONE);
+                        dlText.setText(ex.getMessage());
+                    });
+                }
+            });
+        });
+
+        row.addView(laterBtn);
+        row.addView(installBtn);
+        box.addView(row);
+        d.setOnDismissListener(dialog -> {
+            if (downloading[0]) {
+                cancelled.set(true);
+            }
+        });
+        d.show();
     }
 
     private void showDesignSystemPickerDialog() {

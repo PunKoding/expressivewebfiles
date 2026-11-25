@@ -355,6 +355,8 @@ public final class TransferServer {
             String baseJson = stats.toJson(stats.getServerIp(), port, fs[0], fs[1], model);
             String themeJson = ThemeTokens.read(context).toJson();
             String json = baseJson.substring(0, baseJson.length() - 1)
+                    + ",\"appVersion\":\"" + TransferStats.escapeJson(AppVersion.NAME) + "\""
+                    + ",\"appVersionCode\":" + AppVersion.CODE
                     + ",\"theme\":" + themeJson + "}";
             byte[] data = json.getBytes(StandardCharsets.UTF_8);
             sendHeaders(out, 200, "OK", "application/json; charset=utf-8", data.length, noCacheHeaders(), keepAlive);
