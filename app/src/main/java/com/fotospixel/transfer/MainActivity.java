@@ -1754,22 +1754,8 @@ public final class MainActivity extends Activity {
         verTitle.setTextColor(theme.onSurface);
         verTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         verTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        verTitle.setPadding(0, 0, 0, dp(8));
         aboutCard.addView(verTitle);
-
-        TextView verMeta = new TextView(this);
-        verMeta.setText("Compilación " + AppVersion.CODE + " · " + getPackageName());
-        verMeta.setTextColor(theme.onSurfaceVariant);
-        verMeta.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        verMeta.setPadding(0, dp(4), 0, 0);
-        aboutCard.addView(verMeta);
-
-        TextView verScheme = new TextView(this);
-        verScheme.setText("Versionado: +0.0.1 correcciones · +0.1 nuevas funciones");
-        verScheme.setTextColor(theme.onSurfaceVariant);
-        verScheme.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-        verScheme.setAlpha(0.85f);
-        verScheme.setPadding(0, dp(6), 0, dp(10));
-        aboutCard.addView(verScheme);
 
         updateStatusText = new TextView(this);
         boolean autoUpd = AppUpdater.isAutoCheckEnabled(this);

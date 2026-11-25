@@ -155,13 +155,9 @@ El script [`build.sh`](build.sh) ejecuta los 6 pasos automáticamente:
 
 ## Capturas de pantalla
 
-> Puedes añadir aquí capturas de la app nativa (en distintas capas como Nothing OS, One UI o Material 3 Expressive) y del portal web antes o después de publicar el repositorio.
-
-<!-- Ejemplo:
-| Servidor | Archivos | Almacenamiento (Sunburst) | Portal Web |
+| Servidor | Archivos | Almacenamiento (Sunburst) | Ajustes |
 | :---: | :---: | :---: | :---: |
-| ![Servidor](docs/server.png) | ![Archivos](docs/files.png) | ![Almacenamiento](docs/storage.png) | ![Web](docs/web.png) |
--->
+| ![Servidor](.github/screenshots/servidor.png) | ![Archivos](.github/screenshots/archivos.png) | ![Almacenamiento](.github/screenshots/almacenamiento.png) | ![Ajustes](.github/screenshots/ajustes.png) |
 
 ---
 

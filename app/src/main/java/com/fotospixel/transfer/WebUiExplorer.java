@@ -157,6 +157,7 @@ public final class WebUiExplorer {
         "      <div class=\"sel-bar\" id=\"selectionBar\">\n" +
         "        <span id=\"selSummary\" style=\"font-weight:700;font-size:13px\"></span>\n" +
         "        <div style=\"display:flex;gap:6px;flex-wrap:wrap\">\n" +
+        "          <button class=\"btn btn-sm btn-primary btn-resp\" title=\"Descargar archivos sin ZIP\" onclick=\"downloadSelected()\">" + WebUi.SVG_DOWNLOAD + "<span class=\"btn-lbl\">Descargar</span></button>\n" +
         "          <button class=\"btn btn-sm\" onclick=\"copyCutSelected('copy')\">Copiar</button>\n" +
         "          <button class=\"btn btn-sm\" onclick=\"copyCutSelected('cut')\">Cortar</button>\n" +
         "          <button class=\"btn btn-sm btn-resp\" title=\"Empaquetar ZIP\" onclick=\"packSelected('zip')\">" + WebUi.SVG_ZIP + "<span class=\"btn-lbl\">ZIP</span></button>\n" +
@@ -616,6 +617,36 @@ public final class WebUiExplorer {
         "  const d = await r.json();\n" +
         "  if (r.ok && d.ok) { showExplorerNotice('Creado: /' + d.path + ' (' + fmtBytes(d.bytes) + ', ' + d.files + ' archivos)'); browse(currentDir); }\n" +
         "  else { showExplorerNotice('Error: ' + (d.error || 'Fallo al comprimir')); }\n" +
+        "}\n" +
+        "function downloadSelected() {\n" +
+        "  if (selectedPaths.size === 0) return;\n" +
+        "  const byPath = new Map();\n" +
+        "  for (const e of explorerEntries) {\n" +
+        "    const fp = e.path || (currentDir ? currentDir + '/' + e.name : e.name);\n" +
+        "    byPath.set(fp, e);\n" +
+        "  }\n" +
+        "  const files = [];\n" +
+        "  let dirCount = 0;\n" +
+        "  for (const fp of selectedPaths) {\n" +
+        "    const meta = byPath.get(fp);\n" +
+        "    if (meta && meta.isDir) { dirCount++; } else { files.push(fp); }\n" +
+        "  }\n" +
+        "  if (files.length === 0) {\n" +
+        "    showExplorerNotice('Solo hay carpetas seleccionadas; usa ZIP para descargar carpetas.');\n" +
+        "    return;\n" +
+        "  }\n" +
+        "  showExplorerNotice('Descargando ' + files.length + (files.length === 1 ? ' archivo' : ' archivos') + (dirCount > 0 ? ' (' + dirCount + ' carpeta/s omitida/s; usa ZIP para carpetas)' : '') + '...');\n" +
+        "  files.forEach((fp, idx) => {\n" +
+        "    setTimeout(() => {\n" +
+        "      const a = document.createElement('a');\n" +
+        "      a.href = '/api/download?path=' + encodeURIComponent(fp);\n" +
+        "      a.download = fp.split('/').pop() || 'archivo';\n" +
+        "      a.style.display = 'none';\n" +
+        "      document.body.appendChild(a);\n" +
+        "      a.click();\n" +
+        "      setTimeout(() => a.remove(), 1000);\n" +
+        "    }, idx * 280);\n" +
+        "  });\n" +
         "}\n" +
         "async function packSelected(fmt) {\n" +
         "  if (selectedPaths.size === 0) return;\n" +

@@ -1107,7 +1107,7 @@ public final class WebUi {
         "    const urlStr = 'http://' + s.ip + ':' + s.port;\n" +
         "    document.getElementById('devInfo').textContent = s.deviceModel + ' · ' + urlStr;\n" +
         "    document.getElementById('settingsUrl').textContent = urlStr;\n" +
-        "    if (s.appVersion) document.getElementById('webVersionFooter').textContent = 'Expressive Web Files · v' + s.appVersion + ' (build ' + (s.appVersionCode || '') + ')';\n" +
+        "    if (s.appVersion) document.getElementById('webVersionFooter').textContent = 'Expressive Web Files · v' + s.appVersion;\n" +
         "    const pill = document.getElementById('connPill');\n" +
         "    pill.classList.toggle('offline', !s.serverRunning);\n" +
         "    document.getElementById('connLabel').textContent = s.serverRunning ? 'En línea' : 'Detenido';\n" +
