@@ -3,7 +3,6 @@
 ![Android API](https://img.shields.io/badge/Android-API%2026%E2%80%9335%2B%20(8.0%E2%80%9316%2B)-3DDC84?logo=android&logoColor=white)
 ![Pure Java](https://img.shields.io/badge/Java-100%25%20Java%20(Sin%20dependencias)-ED8B00?logo=openjdk&logoColor=white)
 ![Build System](https://img.shields.io/badge/Build-Sin%20Gradle%20(aapt2%20%2B%20javac%20%2B%20d8)-4285F4)
-![mDNS](https://img.shields.io/badge/mDNS-%3Cmarca%3E.files.local-0A7EA4)
 ![Idiomas](https://img.shields.io/badge/Idiomas-ES%20%C2%B7%20EN%20%C2%B7%20DE%20%C2%B7%20FR%20%C2%B7%20JA%20%C2%B7%20ZH-6750A4)
 
 **Expressive Web Files** es una aplicación Android ligera y sin dependencias externas que combina en una sola herramienta:
