@@ -566,6 +566,10 @@ public final class OsDesignSystem {
         return "";
     }
 
+    public static boolean supportsMonetPalette(SkinId id) {
+        return id == SkinId.MATERIAL_YOU || id == SkinId.MATERIAL_EXPRESSIVE;
+    }
+
     private static String formatOneUiLabel(String raw) {
         if (raw == null || raw.isEmpty()) return "Samsung One UI";
         try {

@@ -621,7 +621,8 @@ public final class WebUiExplorer {
         "function downloadSelected() {\n" +
         "  if (selectedPaths.size === 0) return;\n" +
         "  const byPath = new Map();\n" +
-        "  for (const e of explorerEntries) {\n" +
+        "  const list = (typeof currentEntries !== 'undefined' && Array.isArray(currentEntries)) ? currentEntries : [];\n" +
+        "  for (const e of list) {\n" +
         "    const fp = e.path || (currentDir ? currentDir + '/' + e.name : e.name);\n" +
         "    byPath.set(fp, e);\n" +
         "  }\n" +
@@ -638,14 +639,12 @@ public final class WebUiExplorer {
         "  showExplorerNotice('Descargando ' + files.length + (files.length === 1 ? ' archivo' : ' archivos') + (dirCount > 0 ? ' (' + dirCount + ' carpeta/s omitida/s; usa ZIP para carpetas)' : '') + '...');\n" +
         "  files.forEach((fp, idx) => {\n" +
         "    setTimeout(() => {\n" +
-        "      const a = document.createElement('a');\n" +
-        "      a.href = '/api/download?path=' + encodeURIComponent(fp);\n" +
-        "      a.download = fp.split('/').pop() || 'archivo';\n" +
-        "      a.style.display = 'none';\n" +
-        "      document.body.appendChild(a);\n" +
-        "      a.click();\n" +
-        "      setTimeout(() => a.remove(), 1000);\n" +
-        "    }, idx * 280);\n" +
+        "      const ifr = document.createElement('iframe');\n" +
+        "      ifr.style.display = 'none';\n" +
+        "      ifr.src = '/api/download?path=' + encodeURIComponent(fp);\n" +
+        "      document.body.appendChild(ifr);\n" +
+        "      setTimeout(() => ifr.remove(), 60000);\n" +
+        "    }, idx * 250);\n" +
         "  });\n" +
         "}\n" +
         "async function packSelected(fmt) {\n" +

@@ -1,6 +1,7 @@
 package com.fotospixel.transfer;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 
@@ -12,6 +13,61 @@ import java.util.Locale;
  * identically to both native views and WebUi.
  */
 public final class ThemeTokens {
+
+    private static final String PREFS_MONET = "fotospixel_design";
+    private static final String KEY_MONET_ACCENT = "monet_accent";
+
+    public enum MonetAccent {
+        SYSTEM_AUTO("Automático (Color del sistema)", "#6750A4"),
+        IRIS("Lavanda Pixel (Iris)", "#6750A4"),
+        OCEAN("Azul Océano (Bay)", "#0061A4"),
+        EMERALD("Verde Esmeralda (Mint)", "#006C4C"),
+        AMBER("Ámbar Solar (Gold)", "#825500"),
+        CORAL("Coral Terracota (Rose)", "#9C4146"),
+        TEAL("Turquesa Glaciar (Teal)", "#006874"),
+        INDIGO("Índigo Noche (Cobalt)", "#3F51B5"),
+        SAKURA("Rosa Sakura (Plum)", "#8E4585");
+
+        public final String label;
+        public final String seedHex;
+
+        MonetAccent(String label, String seedHex) {
+            this.label = label;
+            this.seedHex = seedHex;
+        }
+    }
+
+    public static MonetAccent getSavedMonetAccent(Context ctx) {
+        if (ctx == null) return MonetAccent.SYSTEM_AUTO;
+        String raw = ctx.getApplicationContext()
+                .getSharedPreferences(PREFS_MONET, Context.MODE_PRIVATE)
+                .getString(KEY_MONET_ACCENT, MonetAccent.SYSTEM_AUTO.name());
+        try {
+            return MonetAccent.valueOf(raw);
+        } catch (Exception ignored) {
+            return MonetAccent.SYSTEM_AUTO;
+        }
+    }
+
+    public static void saveMonetAccent(Context ctx, MonetAccent accent) {
+        if (ctx == null) return;
+        MonetAccent target = (accent == null) ? MonetAccent.SYSTEM_AUTO : accent;
+        ctx.getApplicationContext()
+                .getSharedPreferences(PREFS_MONET, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_MONET_ACCENT, target.name())
+                .apply();
+        TransferService.notifyStateChangedIfRunning();
+    }
+
+    public static int getPreviewSeedColor(Context ctx, MonetAccent accent) {
+        MonetAccent a = (accent == null) ? MonetAccent.SYSTEM_AUTO : accent;
+        if (a == MonetAccent.SYSTEM_AUTO && ctx != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            int fallback = Color.parseColor(MonetAccent.IRIS.seedHex);
+            return safeColor(ctx, android.R.color.system_accent1_500, fallback);
+        }
+        return Color.parseColor(a.seedHex);
+    }
 
     public final int surface;
     public final int surfaceDim;
@@ -248,19 +304,11 @@ public final class ThemeTokens {
     }
 
     private static ThemeTokens resolveMaterialYou(Context ctx, OsDesignSystem.Profile p, boolean night) {
-        ThemeTokens base = night
-                ? make("#141218", "#100E14", "#36343B", "#0F0D13", "#1D1B20", "#211F26", "#2B2930", "#36343B",
-                       "#D0BCFF", "#381E72", "#4F378B", "#EADDFF",
-                       "#CCC2DC", "#332D41", "#4A4458", "#E8DEF8",
-                       "#EFB8C8", "#492532", "#633B48", "#FFD8E4",
-                       "#E6E0E9", "#CAC4D0", "#938F99", "#49454F",
-                       "#F2B8B5", "#601410", "#8C1D18", "#F9DEDC", p)
-                : make("#FEF7FF", "#F3EDF7", "#FFFFFF", "#FFFFFF", "#F7F2FA", "#F3EDF7", "#ECE6F0", "#E6E0E9",
-                       "#6750A4", "#FFFFFF", "#EADDFF", "#21005D",
-                       "#625B71", "#FFFFFF", "#E8DEF8", "#1D192B",
-                       "#7D5260", "#FFFFFF", "#FFD8E4", "#31111D",
-                       "#1D1B20", "#49454F", "#79747E", "#CAC4D0",
-                       "#B3261E", "#FFFFFF", "#F9DEDC", "#410E0B", p);
+        MonetAccent accent = (ctx != null) ? getSavedMonetAccent(ctx) : MonetAccent.SYSTEM_AUTO;
+        if (accent != MonetAccent.SYSTEM_AUTO) {
+            return buildMonetPreset(accent, p, night, false);
+        }
+        ThemeTokens base = buildMonetPreset(MonetAccent.IRIS, p, night, false);
 
         if (ctx != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (night) {
@@ -323,19 +371,11 @@ public final class ThemeTokens {
     }
 
     private static ThemeTokens resolveMaterialExpressive(Context ctx, OsDesignSystem.Profile p, boolean night) {
-        ThemeTokens base = night
-                ? make("#131313", "#131313", "#393939", "#0E0E0E", "#1B1B1B", "#1F1F1F", "#2A2A2A", "#353535",
-                       "#CABEFF", "#322075", "#49398C", "#E6DEFF",
-                       "#CAC3DC", "#312E41", "#484458", "#E6DFF9",
-                       "#EDB8CC", "#492535", "#623B4B", "#FFD8E5",
-                       "#E2E2E2", "#C6C6C6", "#919191", "#474747",
-                       "#FFB4AB", "#690005", "#93000A", "#FFDAD6", p)
-                : make("#FAF8FF", "#EEECF6", "#FFFFFF", "#FFFFFF", "#F4F1FA", "#EEEBF6", "#E7E3F0", "#DEDAE8",
-                       "#5D43A6", "#FFFFFF", "#E6DEFF", "#1E0B5C",
-                       "#5E5872", "#FFFFFF", "#E4DFF8", "#1D192B",
-                       "#8E3D62", "#FFFFFF", "#FFD8E6", "#3B0721",
-                       "#1C1B22", "#484552", "#787484", "#CAC5D6",
-                       "#BA1A1A", "#FFFFFF", "#FFDAD6", "#410002", p);
+        MonetAccent accent = (ctx != null) ? getSavedMonetAccent(ctx) : MonetAccent.SYSTEM_AUTO;
+        if (accent != MonetAccent.SYSTEM_AUTO) {
+            return buildMonetPreset(accent, p, night, true);
+        }
+        ThemeTokens base = buildMonetPreset(MonetAccent.IRIS, p, night, true);
 
         if (ctx != null && Build.VERSION.SDK_INT >= 34) {
             if (night) {
@@ -400,7 +440,143 @@ public final class ThemeTokens {
                         safeColor(ctx, android.R.color.system_on_error_container_light, base.onErrorContainer), p);
             }
         }
-        return base;
+        return (ctx != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                ? resolveMaterialYou(ctx, p, night)
+                : base;
+    }
+
+    public static ThemeTokens buildMonetPreset(MonetAccent accent, OsDesignSystem.Profile p, boolean night, boolean expressive) {
+        MonetAccent a = (accent == null || accent == MonetAccent.SYSTEM_AUTO) ? MonetAccent.IRIS : accent;
+        switch (a) {
+            case OCEAN:
+                return night
+                        ? make("#101418", "#0B0F13", "#31363B", "#0A0E12", "#181C20", "#1C2024", "#262B30", "#31363B",
+                               "#9ECAFF", "#003258", "#00497D", "#D1E4FF",
+                               "#BBC7DB", "#253140", "#3B4858", "#D7E3F7",
+                               "#D6BEE4", "#3B2948", "#523F5F", "#F2DAFF",
+                               "#E0E2E8", "#C3C7CF", "#8D9199", "#43474E",
+                               "#FFB4AB", "#690005", "#93000A", "#FFDAD6", p)
+                        : make("#F8F9FF", "#ECEEF6", "#FFFFFF", "#FFFFFF", "#F2F4FC", "#ECEEF6", "#E6E8F0", "#E0E2EC",
+                               "#0061A4", "#FFFFFF", "#D1E4FF", "#001D36",
+                               "#535F70", "#FFFFFF", "#D7E3F7", "#101C2B",
+                               "#6B5778", "#FFFFFF", "#F2DAFF", "#251431",
+                               "#191C20", "#43474E", "#73777F", "#C3C7CF",
+                               "#BA1A1A", "#FFFFFF", "#FFDAD6", "#410002", p);
+            case EMERALD:
+                return night
+                        ? make("#0F1512", "#0A100D", "#2E3632", "#090E0C", "#171D1A", "#1B211E", "#252B28", "#303633",
+                               "#6DDBAC", "#003826", "#005138", "#89F8C7",
+                               "#B3CCC0", "#1F352B", "#354B41", "#CFE9DB",
+                               "#A6CCE0", "#093545", "#244C5D", "#C2E8FD",
+                               "#DFE4DF", "#BFC9C2", "#89938D", "#404944",
+                               "#FFB4AB", "#690005", "#93000A", "#FFDAD6", p)
+                        : make("#F5FBF6", "#E9F1EC", "#FFFFFF", "#FFFFFF", "#EFF6F1", "#E9F0EB", "#E3EBE5", "#DCE4DF",
+                               "#006C4C", "#FFFFFF", "#89F8C7", "#002114",
+                               "#4D6357", "#FFFFFF", "#CFE9DB", "#092016",
+                               "#3D6374", "#FFFFFF", "#C2E8FD", "#001F2A",
+                               "#171D1A", "#404944", "#707973", "#BFC9C2",
+                               "#BA1A1A", "#FFFFFF", "#FFDAD6", "#410002", p);
+            case AMBER:
+                return night
+                        ? make("#17130B", "#120E07", "#3A3329", "#100C05", "#201B13", "#241F17", "#2F2921", "#3A332B",
+                               "#FFB951", "#452B00", "#633F00", "#FFDDB3",
+                               "#DEC2A2", "#3E2D16", "#56432B", "#FBDEBC",
+                               "#B8CE9E", "#243515", "#3A4C2A", "#D4EAB9",
+                               "#ECE1D4", "#D2C4B4", "#9B8F80", "#4F4539",
+                               "#FFB4AB", "#690005", "#93000A", "#FFDAD6", p)
+                        : make("#FFF8F3", "#F4ECE3", "#FFFFFF", "#FFFFFF", "#FAF2E9", "#F4ECE3", "#EDE6DD", "#E7E0D7",
+                               "#825500", "#FFFFFF", "#FFDDB3", "#291800",
+                               "#6F5B40", "#FFFFFF", "#FBDEBC", "#271904",
+                               "#516440", "#FFFFFF", "#D4EAB9", "#102004",
+                               "#211B13", "#4F4539", "#817567", "#D2C4B4",
+                               "#BA1A1A", "#FFFFFF", "#FFDAD6", "#410002", p);
+            case CORAL:
+                return night
+                        ? make("#1A1112", "#140C0D", "#3D3132", "#120A0B", "#22191A", "#271D1E", "#322728", "#3D3233",
+                               "#FFB3B4", "#5F131C", "#7E2930", "#FFDAD9",
+                               "#E6BDBD", "#44292B", "#5D3F40", "#FFDAD9",
+                               "#E5C18D", "#422C05", "#5B4319", "#FFDEA6",
+                               "#F0DEDF", "#D7C1C1", "#9F8C8C", "#524343",
+                               "#FFB4AB", "#690005", "#93000A", "#FFDAD6", p)
+                        : make("#FFF8F7", "#F7EAE9", "#FFFFFF", "#FFFFFF", "#FCEFEE", "#F6EAE9", "#EFE3E3", "#E9DDDD",
+                               "#9C4146", "#FFFFFF", "#FFDAD9", "#400009",
+                               "#775657", "#FFFFFF", "#FFDAD9", "#2C1516",
+                               "#755A2F", "#FFFFFF", "#FFDEA6", "#281800",
+                               "#22191A", "#524343", "#857373", "#D7C1C1",
+                               "#BA1A1A", "#FFFFFF", "#FFDAD6", "#410002", p);
+            case TEAL:
+                return night
+                        ? make("#0E1416", "#090F11", "#2E3538", "#080D0F", "#171D1F", "#1B2123", "#252B2D", "#303639",
+                               "#4FD8EB", "#00363D", "#004F58", "#97F0FF",
+                               "#B1CBD0", "#1C3438", "#334A4F", "#CDE7EC",
+                               "#BAC6EA", "#24304D", "#3B4664", "#DAE2FF",
+                               "#DEE3E5", "#BFC8CA", "#899294", "#3F484A",
+                               "#FFB4AB", "#690005", "#93000A", "#FFDAD6", p)
+                        : make("#F5FAFB", "#E9EFF1", "#FFFFFF", "#FFFFFF", "#EFF5F6", "#E9EFF0", "#E3E9EB", "#DEE4E5",
+                               "#006874", "#FFFFFF", "#97F0FF", "#001F24",
+                               "#4A6267", "#FFFFFF", "#CDE7EC", "#051F23",
+                               "#525E7D", "#FFFFFF", "#DAE2FF", "#0E1B37",
+                               "#171D1E", "#3F484A", "#6F797B", "#BFC8CA",
+                               "#BA1A1A", "#FFFFFF", "#FFDAD6", "#410002", p);
+            case INDIGO:
+                return night
+                        ? make("#12131B", "#0D0E16", "#333540", "#0C0D14", "#1A1B24", "#1E1F28", "#282A34", "#333540",
+                               "#BAC3FF", "#162780", "#2E3F99", "#DEE1FF",
+                               "#C3C5DD", "#2C2F42", "#434659", "#DFE1F9",
+                               "#E6B9D7", "#45263D", "#5E3C54", "#FFD7F0",
+                               "#E3E1EC", "#C6C5D0", "#90909A", "#45464F",
+                               "#FFB4AB", "#690005", "#93000A", "#FFDAD6", p)
+                        : make("#FAF8FF", "#EEEBF6", "#FFFFFF", "#FFFFFF", "#F3F2FC", "#EDEBF6", "#E7E6F0", "#E2E1EC",
+                               "#3F51B5", "#FFFFFF", "#DEE1FF", "#000F5C",
+                               "#5A5D72", "#FFFFFF", "#DFE1F9", "#171A2C",
+                               "#77536D", "#FFFFFF", "#FFD7F0", "#2D1227",
+                               "#1A1B21", "#45464F", "#767680", "#C6C5D0",
+                               "#BA1A1A", "#FFFFFF", "#FFDAD6", "#410002", p);
+            case SAKURA:
+                return night
+                        ? make("#181116", "#130C11", "#3B3138", "#110A0F", "#20191E", "#251D22", "#30272D", "#3B3238",
+                               "#FFAEEB", "#581552", "#722D6B", "#FFD7F3",
+                               "#D9BFD2", "#3D2B3A", "#544150", "#F6DBEF",
+                               "#F5B8A7", "#4C261B", "#663C2E", "#FFDBD1",
+                               "#EDE0E7", "#D1C2CB", "#9A8D95", "#4E444B",
+                               "#FFB4AB", "#690005", "#93000A", "#FFDAD6", p)
+                        : make("#FFF7FA", "#F5EAF1", "#FFFFFF", "#FFFFFF", "#FBF0F6", "#F4EAEF", "#EEE4EA", "#E8DFE4",
+                               "#8E4585", "#FFFFFF", "#FFD7F3", "#380036",
+                               "#6D5868", "#FFFFFF", "#F6DBEF", "#261624",
+                               "#815244", "#FFFFFF", "#FFDBD1", "#321208",
+                               "#21191E", "#4E444B", "#7F747B", "#D1C2CB",
+                               "#BA1A1A", "#FFFFFF", "#FFDAD6", "#410002", p);
+            case IRIS:
+            default:
+                if (expressive) {
+                    return night
+                            ? make("#131313", "#131313", "#393939", "#0E0E0E", "#1B1B1B", "#1F1F1F", "#2A2A2A", "#353535",
+                                   "#CABEFF", "#322075", "#49398C", "#E6DEFF",
+                                   "#CAC3DC", "#312E41", "#484458", "#E6DFF9",
+                                   "#EDB8CC", "#492535", "#623B4B", "#FFD8E5",
+                                   "#E2E2E2", "#C6C6C6", "#919191", "#474747",
+                                   "#FFB4AB", "#690005", "#93000A", "#FFDAD6", p)
+                            : make("#FAF8FF", "#EEECF6", "#FFFFFF", "#FFFFFF", "#F4F1FA", "#EEEBF6", "#E7E3F0", "#DEDAE8",
+                                   "#5D43A6", "#FFFFFF", "#E6DEFF", "#1E0B5C",
+                                   "#5E5872", "#FFFFFF", "#E4DFF8", "#1D192B",
+                                   "#8E3D62", "#FFFFFF", "#FFD8E6", "#3B0721",
+                                   "#1C1B22", "#484552", "#787484", "#CAC5D6",
+                                   "#BA1A1A", "#FFFFFF", "#FFDAD6", "#410002", p);
+                }
+                return night
+                        ? make("#141218", "#100E14", "#36343B", "#0F0D13", "#1D1B20", "#211F26", "#2B2930", "#36343B",
+                               "#D0BCFF", "#381E72", "#4F378B", "#EADDFF",
+                               "#CCC2DC", "#332D41", "#4A4458", "#E8DEF8",
+                               "#EFB8C8", "#492532", "#633B48", "#FFD8E4",
+                               "#E6E0E9", "#CAC4D0", "#938F99", "#49454F",
+                               "#F2B8B5", "#601410", "#8C1D18", "#F9DEDC", p)
+                        : make("#FEF7FF", "#F3EDF7", "#FFFFFF", "#FFFFFF", "#F7F2FA", "#F3EDF7", "#ECE6F0", "#E6E0E9",
+                               "#6750A4", "#FFFFFF", "#EADDFF", "#21005D",
+                               "#625B71", "#FFFFFF", "#E8DEF8", "#1D192B",
+                               "#7D5260", "#FFFFFF", "#FFD8E4", "#31111D",
+                               "#1D1B20", "#49454F", "#79747E", "#CAC4D0",
+                               "#B3261E", "#FFFFFF", "#F9DEDC", "#410E0B", p);
+        }
     }
 
     private static ThemeTokens make(

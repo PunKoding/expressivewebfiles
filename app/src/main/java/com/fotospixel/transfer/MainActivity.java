@@ -978,11 +978,12 @@ public final class MainActivity extends Activity {
         storageCollectorCard.addView(storageCollectorTitle);
 
         TextView colSub = new TextView(this);
-        colSub.setText("Elementos marcados para borrar en bloque (toca un chip para quitar):");
+        colSub.setText("Mantén pulsado cualquier archivo o carpeta para marcarlo · Toca «Ver lista» para revisar o retirar elementos.");
         colSub.setTextColor(ThemeTokens.withAlpha(theme.onErrorContainer, 210));
         colSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         colSub.setPadding(0, dp(2), 0, dp(8));
         storageCollectorCard.addView(colSub);
+        storageCollectorTitle.setOnClickListener(v -> showStorageMarkedListDialog());
 
         HorizontalScrollView colChipsScroll = new HorizontalScrollView(this);
         colChipsScroll.setHorizontalScrollBarEnabled(false);
@@ -995,21 +996,30 @@ public final class MainActivity extends Activity {
         colBtns.setOrientation(LinearLayout.HORIZONTAL);
         colBtns.setPadding(0, dp(10), 0, 0);
 
+        Button reviewColBtn = createIconPillButton(
+                "Ver lista", R.drawable.ic_m3_menu, theme.secondaryContainer, theme.onSecondaryContainer);
+        reviewColBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        LinearLayout.LayoutParams rcbLp = new LinearLayout.LayoutParams(0, dp(40), 1f);
+        rcbLp.rightMargin = dp(5);
+        reviewColBtn.setLayoutParams(rcbLp);
+        reviewColBtn.setOnClickListener(v -> showStorageMarkedListDialog());
+        colBtns.addView(reviewColBtn);
+
         Button clearColBtn = createIconPillButton(
                 "Vaciar", 0, ThemeTokens.withAlpha(theme.onErrorContainer, 28), theme.onErrorContainer);
         clearColBtn.setCompoundDrawablesRelative(null, null, null, null);
-        clearColBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
-        LinearLayout.LayoutParams ccbLp = new LinearLayout.LayoutParams(0, dp(40), 1f);
-        ccbLp.rightMargin = dp(6);
+        clearColBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        LinearLayout.LayoutParams ccbLp = new LinearLayout.LayoutParams(0, dp(40), 0.85f);
+        ccbLp.rightMargin = dp(5);
         clearColBtn.setLayoutParams(ccbLp);
         clearColBtn.setOnClickListener(v -> clearStorageCollector());
         colBtns.addView(clearColBtn);
 
         Button purgeColBtn = createIconPillButton(
-                "Liberar espacio", R.drawable.ic_m3_stop, theme.error, theme.onError);
-        purgeColBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
-        LinearLayout.LayoutParams pcbLp = new LinearLayout.LayoutParams(0, dp(40), 1.5f);
-        pcbLp.leftMargin = dp(6);
+                "Eliminar todo", R.drawable.ic_m3_stop, theme.error, theme.onError);
+        purgeColBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        LinearLayout.LayoutParams pcbLp = new LinearLayout.LayoutParams(0, dp(40), 1.35f);
+        pcbLp.leftMargin = dp(2);
         purgeColBtn.setLayoutParams(pcbLp);
         purgeColBtn.setOnClickListener(v -> confirmPurgeStorageCollector());
         colBtns.addView(purgeColBtn);
@@ -1367,9 +1377,16 @@ public final class MainActivity extends Activity {
                 if (child.isDir) {
                     if (storageSunburstView != null) storageSunburstView.setFocusedNode(child);
                     onStorageFocusChanged(child);
+                } else if (!storageCollectorFiles.isEmpty()) {
+                    toggleStorageCollectorNode(child);
                 } else {
                     showStorageNodeOptionsDialog(child);
                 }
+            });
+            row.setOnLongClickListener(v -> {
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                toggleStorageCollectorNode(child);
+                return true;
             });
             storageListContainer.addView(row);
         }
@@ -1456,7 +1473,126 @@ public final class MainActivity extends Activity {
         }
         storageCollectorTitle.setText(storageCollectorFiles.size()
                 + (storageCollectorFiles.size() == 1 ? " elemento" : " elementos")
-                + " · " + TransferStats.formatBytes(totalBytes) + " liberables");
+                + " · " + TransferStats.formatBytes(totalBytes) + " marcados");
+    }
+
+    private void showStorageMarkedListDialog() {
+        if (storageCollectorNodes.isEmpty()) {
+            Toast.makeText(this, "No hay elementos marcados todavía. Mantén pulsado uno para marcarlo.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        final Dialog d = new Dialog(this);
+        final LinearLayout box = showExpressiveModal(
+                d,
+                "Elementos marcados para eliminar",
+                "Retira los que quieras conservar o elimínalos todos de golpe.");
+
+        final TextView totalSummary = new TextView(this);
+        totalSummary.setTextColor(theme.error);
+        totalSummary.setTypeface(Typeface.DEFAULT_BOLD);
+        totalSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        totalSummary.setPadding(0, 0, 0, dp(10));
+        box.addView(totalSummary);
+
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(260));
+        slp.bottomMargin = dp(12);
+        scroll.setLayoutParams(slp);
+
+        final LinearLayout listWrap = new LinearLayout(this);
+        listWrap.setOrientation(LinearLayout.VERTICAL);
+        scroll.addView(listWrap);
+        box.addView(scroll);
+
+        final Runnable[] rebuild = new Runnable[1];
+        rebuild[0] = () -> {
+            listWrap.removeAllViews();
+            if (storageCollectorNodes.isEmpty()) {
+                d.dismiss();
+                return;
+            }
+            long totalBytes = 0L;
+            for (final StorageAnalyzer.Node item : new ArrayList<>(storageCollectorNodes.values())) {
+                totalBytes += item.size;
+                LinearLayout row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setBackground(roundedRect(theme.surfaceContainerHigh, 0, dp(14)));
+                row.setPadding(dp(12), dp(9), dp(8), dp(9));
+                LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                rlp.bottomMargin = dp(8);
+                row.setLayoutParams(rlp);
+
+                LinearLayout txtCol = new LinearLayout(this);
+                txtCol.setOrientation(LinearLayout.VERTICAL);
+                txtCol.setLayoutParams(new LinearLayout.LayoutParams(
+                        0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+                TextView nTv = new TextView(this);
+                nTv.setText((item.isDir ? "📁 " : "") + item.name);
+                nTv.setTextColor(theme.onSurface);
+                nTv.setTypeface(Typeface.DEFAULT_BOLD);
+                nTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+                nTv.setSingleLine(true);
+                nTv.setEllipsize(TextUtils.TruncateAt.MIDDLE);
+                txtCol.addView(nTv);
+
+                String rel = (item.file != null) ? item.file.getAbsolutePath() : "";
+                TextView pTv = new TextView(this);
+                pTv.setText(TransferStats.formatBytes(item.size) + " · " + rel);
+                pTv.setTextColor(theme.onSurfaceVariant);
+                pTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                pTv.setSingleLine(true);
+                pTv.setEllipsize(TextUtils.TruncateAt.START);
+                txtCol.addView(pTv);
+                row.addView(txtCol);
+
+                Button rmBtn = createIconPillButton(
+                        "Quitar", 0, theme.secondaryContainer, theme.onSecondaryContainer);
+                rmBtn.setCompoundDrawablesRelative(null, null, null, null);
+                rmBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+                rmBtn.setPadding(dp(10), 0, dp(10), 0);
+                LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, dp(34));
+                rblp.leftMargin = dp(8);
+                rmBtn.setLayoutParams(rblp);
+                rmBtn.setOnClickListener(v -> {
+                    toggleStorageCollectorNode(item);
+                    rebuild[0].run();
+                });
+                row.addView(rmBtn);
+                listWrap.addView(row);
+            }
+            totalSummary.setText(storageCollectorNodes.size()
+                    + (storageCollectorNodes.size() == 1 ? " elemento · " : " elementos · ")
+                    + TransferStats.formatBytes(totalBytes) + " seleccionados");
+        };
+        rebuild[0].run();
+
+        LinearLayout footer = new LinearLayout(this);
+        footer.setOrientation(LinearLayout.HORIZONTAL);
+
+        Button closeB = createIconPillButton("Cerrar", 0, theme.secondaryContainer, theme.onSecondaryContainer);
+        closeB.setCompoundDrawablesRelative(null, null, null, null);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, dp(42), 1f);
+        clp.rightMargin = dp(6);
+        closeB.setLayoutParams(clp);
+        closeB.setOnClickListener(v -> d.dismiss());
+        footer.addView(closeB);
+
+        Button delAllB = createIconPillButton("Eliminar todos", R.drawable.ic_m3_stop, theme.error, theme.onError);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, dp(42), 1.4f);
+        dlp.leftMargin = dp(6);
+        delAllB.setLayoutParams(dlp);
+        delAllB.setOnClickListener(v -> {
+            d.dismiss();
+            confirmPurgeStorageCollector();
+        });
+        footer.addView(delAllB);
+        box.addView(footer);
+        d.show();
     }
 
     private void confirmPurgeStorageCollector() {
@@ -1745,8 +1881,13 @@ public final class MainActivity extends Activity {
 
         osDesignSummaryText = new TextView(this);
         OsDesignSystem.SkinId curOver = OsDesignSystem.getSavedOverride(this);
+        ThemeTokens.MonetAccent curMonet = ThemeTokens.getSavedMonetAccent(this);
+        String monetLine = OsDesignSystem.supportsMonetPalette(skin.id)
+                ? ("\nColor Monet: " + curMonet.label)
+                : "";
         osDesignSummaryText.setText("Detectado: " + skin.hardwareLabel
-                + "\nActivo: " + (curOver == OsDesignSystem.SkinId.AUTO ? ("Automático (" + skin.displayName + ")") : skin.displayName));
+                + "\nActivo: " + (curOver == OsDesignSystem.SkinId.AUTO ? ("Automático (" + skin.displayName + ")") : skin.displayName)
+                + monetLine);
         osDesignSummaryText.setTextColor(theme.onSurface);
         osDesignSummaryText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         osDesignSummaryText.setPadding(0, 0, 0, dp(12));
@@ -1754,10 +1895,71 @@ public final class MainActivity extends Activity {
 
         Button pickSkinBtn = createIconPillButton(
                 "Elegir capa / lenguaje visual", R.drawable.ic_m3_tune, theme.secondaryContainer, theme.onSecondaryContainer);
-        pickSkinBtn.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+        LinearLayout.LayoutParams pskLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
+        pickSkinBtn.setLayoutParams(pskLp);
         pickSkinBtn.setOnClickListener(v -> showDesignSystemPickerDialog());
         designCard.addView(pickSkinBtn);
+
+        if (OsDesignSystem.supportsMonetPalette(skin.id)) {
+            pskLp.bottomMargin = dp(12);
+            TextView monetLbl = createSmallLabel("Color Material You (Monet)");
+            monetLbl.setPadding(dp(2), dp(2), dp(2), dp(8));
+            designCard.addView(monetLbl);
+
+            HorizontalScrollView monetScroll = new HorizontalScrollView(this);
+            monetScroll.setHorizontalScrollBarEnabled(false);
+            LinearLayout.LayoutParams msLp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            msLp.bottomMargin = dp(10);
+            monetScroll.setLayoutParams(msLp);
+
+            LinearLayout swatchRow = new LinearLayout(this);
+            swatchRow.setOrientation(LinearLayout.HORIZONTAL);
+            swatchRow.setGravity(Gravity.CENTER_VERTICAL);
+            for (final ThemeTokens.MonetAccent candidate : ThemeTokens.MonetAccent.values()) {
+                boolean isSel = (candidate == curMonet);
+                int seed = ThemeTokens.getPreviewSeedColor(this, candidate);
+
+                FrameLayout chipWrap = new FrameLayout(this);
+                LinearLayout.LayoutParams cwLp = new LinearLayout.LayoutParams(dp(42), dp(42));
+                cwLp.rightMargin = dp(8);
+                chipWrap.setLayoutParams(cwLp);
+                int ringColor = isSel ? theme.onSurface : theme.outlineVariant;
+                chipWrap.setBackground(rippleBg(seed, ripplePrimary, ringColor, dp(999)));
+                chipWrap.setContentDescription(candidate.label);
+
+                if (candidate == ThemeTokens.MonetAccent.SYSTEM_AUTO) {
+                    TextView autoTxt = new TextView(this);
+                    autoTxt.setText(isSel ? "✓" : "A");
+                    autoTxt.setTextColor(ThemeTokens.isColorLight(seed) ? Color.BLACK : Color.WHITE);
+                    autoTxt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+                    autoTxt.setTypeface(Typeface.DEFAULT_BOLD);
+                    autoTxt.setGravity(Gravity.CENTER);
+                    chipWrap.addView(autoTxt, new FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+                } else if (isSel) {
+                    ImageView chk = new ImageView(this);
+                    chk.setImageDrawable(tintedIcon(
+                            R.drawable.ic_m3_check,
+                            ThemeTokens.isColorLight(seed) ? Color.BLACK : Color.WHITE,
+                            18));
+                    chipWrap.addView(chk, new FrameLayout.LayoutParams(dp(18), dp(18), Gravity.CENTER));
+                }
+                chipWrap.setOnClickListener(v -> applyMonetAccentSelection(candidate));
+                attachSpringTouch(chipWrap);
+                swatchRow.addView(chipWrap);
+            }
+            monetScroll.addView(swatchRow);
+            designCard.addView(monetScroll);
+
+            Button pickMonetBtn = createIconPillButton(
+                    "Monet: " + curMonet.label, R.drawable.ic_m3_photo, theme.primaryContainer, theme.onPrimaryContainer);
+            pickMonetBtn.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(42)));
+            pickMonetBtn.setOnClickListener(v -> showMonetColorPickerDialog());
+            designCard.addView(pickMonetBtn);
+        }
 
         // About & App Version Card (always at the bottom of Ajustes)
         LinearLayout aboutCard = createExpressiveCard(parent, theme.surfaceContainerLow, 28);
@@ -2040,6 +2242,40 @@ public final class MainActivity extends Activity {
                     });
         }
         d.show();
+    }
+
+    private void showMonetColorPickerDialog() {
+        final Dialog d = new Dialog(this);
+        LinearLayout box = showExpressiveModal(
+                d,
+                "Color Material You (Monet)",
+                "Usa el color dinámico del sistema o elige una paleta personalizada.");
+        ThemeTokens.MonetAccent current = ThemeTokens.getSavedMonetAccent(this);
+        for (final ThemeTokens.MonetAccent candidate : ThemeTokens.MonetAccent.values()) {
+            boolean sel = (candidate == current);
+            int seed = ThemeTokens.getPreviewSeedColor(this, candidate);
+            addModalOption(
+                    box,
+                    d,
+                    candidate.label,
+                    sel ? R.drawable.ic_m3_check : R.drawable.ic_m3_photo,
+                    sel ? theme.primaryContainer : ThemeTokens.withAlpha(seed, theme.isLight ? 42 : 68),
+                    sel ? theme.onPrimaryContainer : theme.onSurface,
+                    () -> applyMonetAccentSelection(candidate));
+        }
+        d.show();
+    }
+
+    private void applyMonetAccentSelection(ThemeTokens.MonetAccent candidate) {
+        ThemeTokens.saveMonetAccent(this, candidate);
+        if (!OsDesignSystem.supportsMonetPalette(skin.id)) {
+            OsDesignSystem.SkinId targetSkin = (Build.VERSION.SDK_INT >= 36)
+                    ? OsDesignSystem.SkinId.MATERIAL_EXPRESSIVE
+                    : OsDesignSystem.SkinId.MATERIAL_YOU;
+            OsDesignSystem.saveOverride(this, targetSkin);
+            Toast.makeText(this, "Activado Material You · " + candidate.label, Toast.LENGTH_SHORT).show();
+        }
+        recreate();
     }
 
     private boolean isCompactScreen() {
