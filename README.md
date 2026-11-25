@@ -173,25 +173,3 @@ El script [`build.sh`](build.sh) ejecuta los 6 pasos automáticamente:
 | **Volúmenes y almacenamiento** | `GET /api/volumes` · `GET /api/analyze` |
 | **Explorador y edición** | `GET /api/list` · `GET /api/search` · `GET /api/info` · `GET /api/text` · `POST /api/text` · `POST /api/mkdir` · `POST /api/touch` · `POST /api/rename` · `POST /api/copy` · `POST /api/move` · `DELETE /api/file` · `POST /api/delete_batch` |
 | **Transferencias y archivos comprimidos** | `POST\|PUT /api/upload` · `POST /api/upload_init` · `POST\|PUT /api/upload_chunk` · `POST /api/upload_finish` · `GET\|HEAD /api/download` · `GET /api/zip` · `POST /api/zip_create` · `GET /api/archive_list` · `POST /api/extract` |
-
----
-
-## Preparación para publicar en GitHub
-
-Antes de hacer `git push` a un repositorio público, asegúrate de crear un `.gitignore` en la raíz del proyecto para no subir artefactos generados ni claves locales de firma:
-
-```gitignore
-build/
-*.apk
-*.keystore
-*.jks
-.DS_Store
-.idea/
-*.iml
-```
-
----
-
-## Licencia
-
-Añade un archivo `LICENSE` en la raíz del repositorio con la licencia bajo la que quieras distribuir el proyecto (por ejemplo, MIT o Apache-2.0).
