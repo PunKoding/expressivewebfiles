@@ -4,13 +4,69 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT_DIR"
 
-SKIP_ADB="${SKIP_ADB_INSTALL:-0}"
-for arg in "$@"; do
-  case "$arg" in
+usage() {
+  cat <<'EOF'
+Uso: ./build.sh [opciones]
+
+Compila y firma Expressive Web Files (build/fotospixel.apk).
+En terminal interactiva te preguntará si esta compilación es una nueva versión
+para añadirla al histórico (apks/history/) y si quieres instalarla por ADB.
+
+Opciones:
+  --install              Instala por ADB sin preguntar
+  --no-install           No instala por ADB
+  --history              Guarda el APK en apks/history/ sin subir versión
+  --no-history           No añade este APK a apks/history/
+  --bump <tipo>          Sube versión (fix|patch|feature|minor|major) y guarda en histórico
+  -h, --help             Muestra esta ayuda
+EOF
+}
+
+INSTALL_MODE=""
+HISTORY_MODE=""
+BUMP_MODE=""
+
+if [ "${SKIP_ADB_INSTALL:-0}" = "1" ]; then
+  INSTALL_MODE="no"
+fi
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help|help)
+      usage
+      exit 0
+      ;;
+    --install)
+      INSTALL_MODE="yes"
+      ;;
     --no-install)
-      SKIP_ADB=1
+      INSTALL_MODE="no"
+      ;;
+    --history)
+      HISTORY_MODE="yes"
+      ;;
+    --no-history)
+      HISTORY_MODE="no"
+      ;;
+    --bump)
+      shift
+      if [ "$#" -eq 0 ]; then
+        echo "Falta el tipo tras --bump (fix|feature|major)" >&2
+        exit 1
+      fi
+      BUMP_MODE="$1"
+      HISTORY_MODE="yes"
+      ;;
+    --bump=*)
+      BUMP_MODE="${1#--bump=}"
+      HISTORY_MODE="yes"
+      ;;
+    *)
+      echo "Opción desconocida: $1 (usa --help)" >&2
+      exit 1
       ;;
   esac
+  shift
 done
 
 export JAVA_HOME="${JAVA_HOME:-/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home}"
@@ -26,6 +82,54 @@ APKSIGNER="$BUILD_TOOLS/apksigner"
 BUILD_DIR="$ROOT_DIR/build"
 VERSION_FILE="$ROOT_DIR/VERSION"
 VERSION_NAME="1.0.0"
+if [ -f "$VERSION_FILE" ]; then
+  VERSION_NAME="$(tr -d ' \t\r\n' < "$VERSION_FILE")"
+fi
+
+SAVE_HISTORY=0
+if [ -n "$BUMP_MODE" ]; then
+  "$ROOT_DIR/version.sh" "$BUMP_MODE"
+  SAVE_HISTORY=1
+elif [ "$HISTORY_MODE" = "yes" ]; then
+  SAVE_HISTORY=1
+elif [ "$HISTORY_MODE" = "no" ]; then
+  SAVE_HISTORY=0
+elif [ -t 0 ]; then
+  echo "Versión actual: v${VERSION_NAME}"
+  echo "¿Es una versión nueva para añadir al histórico (apks/history/)?"
+  echo "  0 / Enter) No (compilar solo en build/fotospixel.apk sin añadir al histórico)"
+  echo "  1)         Sí — Corrección de errores (+0.0.1) y guardar en histórico"
+  echo "  2)         Sí — Nueva función          (+0.1)   y guardar en histórico"
+  echo "  3)         Sí — Cambio mayor           (+1.0)   y guardar en histórico"
+  echo "  4)         Sí — Guardar v${VERSION_NAME} actual en el histórico sin subir número"
+  printf "Elige [0-4] (por defecto 0): "
+  read -r H_CHOICE
+  case "$H_CHOICE" in
+    1)
+      "$ROOT_DIR/version.sh" fix
+      SAVE_HISTORY=1
+      ;;
+    2)
+      "$ROOT_DIR/version.sh" feature
+      SAVE_HISTORY=1
+      ;;
+    3)
+      "$ROOT_DIR/version.sh" major
+      SAVE_HISTORY=1
+      ;;
+    4|s|S|y|Y)
+      SAVE_HISTORY=1
+      ;;
+    ""|0|n|N)
+      SAVE_HISTORY=0
+      ;;
+    *)
+      echo "Opción no reconocida; compilando sin añadir al histórico."
+      SAVE_HISTORY=0
+      ;;
+  esac
+fi
+
 if [ -f "$VERSION_FILE" ]; then
   VERSION_NAME="$(tr -d ' \t\r\n' < "$VERSION_FILE")"
 fi
@@ -103,17 +207,39 @@ echo "[5/6] Signing APK..."
   --out "$BUILD_DIR/fotospixel.apk" \
   "$BUILD_DIR/aligned.apk"
 
-HISTORY_DIR="$ROOT_DIR/apks/history"
-mkdir -p "$HISTORY_DIR"
-BUILD_TS="$(date +%Y%m%d-%H%M%S)"
-GIT_SHA="$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || echo nogit)"
-HISTORY_APK="$HISTORY_DIR/expressivewebfiles-v${VERSION_NAME}_${BUILD_TS}_${GIT_SHA}.apk"
-cp "$BUILD_DIR/fotospixel.apk" "$HISTORY_APK"
-echo "Archived APK in apks/history/$(basename "$HISTORY_APK")"
+if [ "$SAVE_HISTORY" = "1" ]; then
+  HISTORY_DIR="$ROOT_DIR/apks/history"
+  mkdir -p "$HISTORY_DIR"
+  BUILD_TS="$(date +%Y%m%d-%H%M%S)"
+  GIT_SHA="$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || echo nogit)"
+  HISTORY_APK="$HISTORY_DIR/expressivewebfiles-v${VERSION_NAME}_${BUILD_TS}_${GIT_SHA}.apk"
+  cp "$BUILD_DIR/fotospixel.apk" "$HISTORY_APK"
+  echo "Archived APK in apks/history/$(basename "$HISTORY_APK")"
+else
+  echo "Histórico omitido (no marcada como nueva versión)."
+fi
+
+DO_INSTALL=1
+if [ "$INSTALL_MODE" = "no" ]; then
+  DO_INSTALL=0
+elif [ "$INSTALL_MODE" = "yes" ]; then
+  DO_INSTALL=1
+elif [ -t 0 ]; then
+  printf "¿Quieres instalar el APK por ADB en el dispositivo conectado? [S/n]: "
+  read -r I_CHOICE
+  case "$I_CHOICE" in
+    n|N|no|NO)
+      DO_INSTALL=0
+      ;;
+    *)
+      DO_INSTALL=1
+      ;;
+  esac
+fi
 
 echo "[6/6] Checking ADB device for installation..."
-if [ "$SKIP_ADB" = "1" ]; then
-  echo "Skipping ADB install (--no-install); APK built at $BUILD_DIR/fotospixel.apk"
+if [ "$DO_INSTALL" = "0" ]; then
+  echo "Instalación por ADB omitida; APK listo en $BUILD_DIR/fotospixel.apk"
 elif adb get-state >/dev/null 2>&1; then
   adb install -r "$BUILD_DIR/fotospixel.apk"
   adb shell appops set com.fotospixel.transfer MANAGE_EXTERNAL_STORAGE allow || true

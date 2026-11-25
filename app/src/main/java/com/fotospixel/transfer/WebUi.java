@@ -24,7 +24,7 @@ public final class WebUi {
     static final String SVG_MORE = "<svg class=\"ico\" viewBox=\"0 0 960 960\"><path d=\"M480,320 Q447,320 423,297 Q400,273 400,240 Q400,207 423,183 Q447,160 480,160 Q513,160 537,183 Q560,207 560,240 Q560,273 537,297 Q513,320 480,320 Z M480,560 Q447,560 423,537 Q400,513 400,480 Q400,447 423,423 Q447,400 480,400 Q513,400 537,423 Q560,447 560,480 Q560,513 537,537 Q513,560 480,560 Z M480,800 Q447,800 423,777 Q400,753 400,720 Q400,687 423,663 Q447,640 480,640 Q513,640 537,663 Q560,687 560,720 Q560,753 537,777 Q513,800 480,800 Z\"/></svg>";
     static final String SVG_CHECK = "<svg class=\"ico\" viewBox=\"0 0 960 960\"><path d=\"M382,684 Q366,684 352,672 L182,502 Q170,490 170,474 Q170,458 182,446 Q194,434 210,434 Q226,434 238,446 L382,590 L722,250 Q734,238 750,238 Q766,238 778,250 Q790,262 790,278 Q790,294 778,306 L412,672 Q398,684 382,684 Z\"/></svg>";
 
-    private static final String HTML_MARKUP =
+    private static final String HTML_HEAD_CSS =
         "<!DOCTYPE html>\n" +
         "<html lang=\"es\">\n" +
         "<head>\n" +
@@ -335,7 +335,9 @@ public final class WebUi {
         "  .modal.open { display: flex; }\n" +
         "  .modal img { max-width: 92vw; max-height: 85vh; border-radius: 22px; }\n" +
         "</style>\n" +
-        "</head>\n" +
+        "</head>\n";
+
+    private static final String HTML_BODY_HTML =
         "<body>\n" +
         "\n" +
         "<div class=\"login-wrap\" id=\"loginView\" style=\"display:none\">\n" +
@@ -1170,12 +1172,13 @@ public final class WebUi {
         "</html>\n";
 
     public static final String HTML = new StringBuilder(
-            HTML_MARKUP.length() + HTML_SCRIPT.length()
+            HTML_HEAD_CSS.length() + HTML_BODY_HTML.length() + HTML_SCRIPT.length()
             + WebUiExplorer.EXPLORER_JS_1.length()
             + WebUiExplorer.EXPLORER_JS_2.length()
             + WebUiStorage.STORAGE_JS.length()
             + HTML_TAIL.length())
-            .append(HTML_MARKUP)
+            .append(HTML_HEAD_CSS)
+            .append(HTML_BODY_HTML)
             .append(HTML_SCRIPT)
             .append(WebUiExplorer.EXPLORER_JS_1)
             .append(WebUiExplorer.EXPLORER_JS_2)

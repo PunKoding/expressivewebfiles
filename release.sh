@@ -97,9 +97,9 @@ fi
 NEW_VER="$(tr -d ' \t\r\n' < "$ROOT_DIR/VERSION")"
 
 if [ "$DO_INSTALL" = "1" ]; then
-  "$ROOT_DIR/build.sh"
+  "$ROOT_DIR/build.sh" --history --install
 else
-  "$ROOT_DIR/build.sh" --no-install
+  "$ROOT_DIR/build.sh" --history --no-install
 fi
 
 RELEASE_DIR="$ROOT_DIR/apks/releases"
