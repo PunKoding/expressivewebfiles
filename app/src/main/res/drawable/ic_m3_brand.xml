@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <!-- Material Symbols Rounded bidirectional transfer brand emblem -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M264,664 V320 L204,380 Q192,392 175,392 Q158,392 146,380 Q134,368 134,351 Q134,334 146,322 L272,196 Q284,184 300,184 Q316,184 328,196 L454,322 Q466,334 466,351 Q466,368 454,380 Q442,392 425,392 Q408,392 396,380 L336,320 V664 Q336,679 325,690 Q315,700 300,700 Q285,700 275,690 Q264,679 264,664 Z M624,296 V640 L564,580 Q552,568 535,568 Q518,568 506,580 Q494,592 494,609 Q494,626 506,638 L632,764 Q644,776 660,776 Q676,776 688,764 L814,638 Q826,626 826,609 Q826,592 814,580 Q802,568 785,568 Q768,568 756,580 L696,640 V296 Q696,281 685,270 Q675,260 660,260 Q645,260 635,270 Q624,281 624,296 Z" />
+</vector>
