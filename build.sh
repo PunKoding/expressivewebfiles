@@ -15,8 +15,8 @@ para añadirla al histórico (apks/history/) y si quieres instalarla por ADB.
 Opciones:
   --install              Instala por ADB sin preguntar
   --no-install           No instala por ADB
-  --history              Guarda el APK en apks/history/ sin subir versión
-  --no-history           No añade este APK a apks/history/
+  --history              Guarda el APK en apks/history/v<VERSION>/ sin subir versión
+  --no-history           No añade este APK a apks/history/v<VERSION>/
   --bump <tipo>          Sube versión (fix|patch|feature|minor|major) y guarda en histórico
   -h, --help             Muestra esta ayuda
 EOF
@@ -208,13 +208,13 @@ echo "[5/6] Signing APK..."
   "$BUILD_DIR/aligned.apk"
 
 if [ "$SAVE_HISTORY" = "1" ]; then
-  HISTORY_DIR="$ROOT_DIR/apks/history"
+  HISTORY_DIR="$ROOT_DIR/apks/history/v${VERSION_NAME}"
   mkdir -p "$HISTORY_DIR"
   BUILD_TS="$(date +%Y%m%d-%H%M%S)"
   GIT_SHA="$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || echo nogit)"
   HISTORY_APK="$HISTORY_DIR/expressivewebfiles-v${VERSION_NAME}_${BUILD_TS}_${GIT_SHA}.apk"
   cp "$BUILD_DIR/fotospixel.apk" "$HISTORY_APK"
-  echo "Archived APK in apks/history/$(basename "$HISTORY_APK")"
+  echo "Archived APK in apks/history/v${VERSION_NAME}/$(basename "$HISTORY_APK")"
 else
   echo "Histórico omitido (no marcada como nueva versión)."
 fi

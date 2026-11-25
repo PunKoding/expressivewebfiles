@@ -96,6 +96,7 @@ public final class TransferServer {
 
     private final Context context;
     private final int port;
+    private volatile int boundPort;
     private final String authUser;
     private final String authPass;
     private final File rootDir;
@@ -118,6 +119,7 @@ public final class TransferServer {
     public TransferServer(Context context, int port, String authUser, String authPass) throws IOException {
         this.context = context.getApplicationContext();
         this.port = port;
+        this.boundPort = port;
         this.authUser = (authUser == null) ? "" : authUser;
         this.authPass = (authPass == null) ? "" : authPass;
         this.rootDir = Environment.getExternalStorageDirectory().getCanonicalFile();
@@ -131,18 +133,38 @@ public final class TransferServer {
         ServerSocket ss = new ServerSocket();
         ss.setReuseAddress(true);
         // Leave kernel TCP receive/send window auto-tuning free up to tcp_rmem max (8 MB).
-        ss.bind(new InetSocketAddress(port), 128);
-        this.serverSocket = ss;
+        int activePort = port;
+        try {
+            ss.bind(new InetSocketAddress(activePort), 128);
+        } catch (IOException e) {
+            if (activePort == 80) {
+                Log.i(TAG, "Port 80 restricted by Android (" + e.getMessage() + "); falling back to 8080");
+                try {
+                    ss.close();
+                } catch (IOException ignored) {
+                }
+                ss = new ServerSocket();
+                ss.setReuseAddress(true);
+                activePort = 8080;
+                ss.bind(new InetSocketAddress(activePort), 128);
+            } else {
+                throw e;
+            }
+        }
+        this.boundPort = activePort;
+        final ServerSocket listenSocket = ss;
+        this.serverSocket = listenSocket;
         this.running = true;
         this.pool = Executors.newFixedThreadPool(24);
         this.mediaScannerPool = Executors.newSingleThreadExecutor();
 
+        final int listenPort = activePort;
         this.acceptThread = new Thread(() -> {
-            Log.i(TAG, "TransferServer listening on port " + port + " root=" + rootDirPath
+            Log.i(TAG, "TransferServer listening on port " + listenPort + " root=" + rootDirPath
                     + " auth=" + (authUser.isEmpty() ? "open" : authUser));
             while (running) {
                 try {
-                    Socket client = ss.accept();
+                    Socket client = listenSocket.accept();
                     pool.execute(() -> handleClient(client));
                 } catch (IOException e) {
                     if (running) {
@@ -182,6 +204,10 @@ public final class TransferServer {
 
     public boolean isRunning() {
         return running;
+    }
+
+    public int getBoundPort() {
+        return boundPort;
     }
 
     private void handleClient(Socket socket) {
@@ -352,7 +378,7 @@ public final class TransferServer {
         if ("GET".equals(method) && "/api/status".equals(rawPath)) {
             long[] fs = getStorageStats();
             String model = Build.MANUFACTURER + " " + Build.MODEL;
-            String baseJson = stats.toJson(stats.getServerIp(), port, fs[0], fs[1], model);
+            String baseJson = stats.toJson(stats.getServerIp(), boundPort, fs[0], fs[1], model);
             String themeJson = ThemeTokens.read(context).toJson();
             String json = baseJson.substring(0, baseJson.length() - 1)
                     + ",\"appVersion\":\"" + TransferStats.escapeJson(AppVersion.NAME) + "\""

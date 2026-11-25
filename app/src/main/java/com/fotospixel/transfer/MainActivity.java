@@ -222,6 +222,7 @@ public final class MainActivity extends Activity {
     private String lastQrUrl = "";
     private Bitmap lastQrBitmap;
     private TextView webUrlText;
+    private TextView ipFallbackText;
 
     private TextView activeCountBadge;
     private Button stopAllBtn;
@@ -715,6 +716,19 @@ public final class MainActivity extends Activity {
         urlLp.bottomMargin = dp(6);
         webUrlText.setLayoutParams(urlLp);
         qrMeta.addView(webUrlText);
+
+        ipFallbackText = new TextView(this);
+        ipFallbackText.setText("IP alternativa: ...");
+        ipFallbackText.setTextColor(theme.onSurfaceVariant);
+        ipFallbackText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        ipFallbackText.setPadding(dp(2), 0, dp(2), dp(6));
+        ipFallbackText.setOnClickListener(v -> {
+            Object tag = v.getTag();
+            if (tag != null) {
+                copyToClipboard("IP alternativa", tag.toString());
+            }
+        });
+        qrMeta.addView(ipFallbackText);
 
         TextView qrHint = new TextView(this);
         qrHint.setText("Toca el código para mostrarlo en pantalla completa.");
@@ -4536,6 +4550,12 @@ public final class MainActivity extends Activity {
             ip = TransferService.getLocalWifiIp();
         }
         int port = stats.getServerPort();
+        String host = stats.getLocalHost();
+        if (host == null || host.isEmpty()) {
+            host = LocalDnsResponder.resolveBaseBrand() + ".files.local";
+        }
+        String ipUrl = LocalDnsResponder.formatHttpUrl(ip, port);
+        String webUrl = LocalDnsResponder.formatHttpUrl(host, port);
 
         int pillRad = dp(skin.chipRadiusDp == 999 ? 24 : skin.chipRadiusDp);
         int btnRad = dp(skin.buttonRadiusDp);
@@ -4557,7 +4577,7 @@ public final class MainActivity extends Activity {
                 quickToggleServerBtn.setBackground(rippleBg(theme.errorContainer, ripplePrimary, 0, btnRad));
                 setButtonIconTint(quickToggleServerBtn, R.drawable.ic_m3_power, theme.onErrorContainer, 16);
             }
-            settingsStateText.setText("Activo en http://" + ip + ":" + port);
+            settingsStateText.setText("Activo en " + webUrl + "\nIP alternativa: " + ipUrl);
             startPulseAnimation();
         } else {
             statusText.setText("Detenido");
@@ -4595,8 +4615,11 @@ public final class MainActivity extends Activity {
         permStatusText.setText("Almacenamiento completo: " + (hasStoragePerm ? "Concedido" : "Pendiente")
                 + " · " + promoSummary);
 
-        String webUrl = "http://" + ip + ":" + port;
         webUrlText.setText(webUrl);
+        if (ipFallbackText != null) {
+            ipFallbackText.setText("IP alternativa (toca): " + ipUrl);
+            ipFallbackText.setTag(ipUrl);
+        }
         if (headerRefs != null && headerRefs.extraSubBannerText != null) {
             String bannerLabel;
             if (skin.id == OsDesignSystem.SkinId.EMUI) {
@@ -4609,10 +4632,10 @@ public final class MainActivity extends Activity {
             headerRefs.extraSubBannerText.setText(bannerLabel);
         }
 
-        if (!webUrl.equals(lastQrUrl)) {
-            lastQrUrl = webUrl;
+        if (!ipUrl.equals(lastQrUrl)) {
+            lastQrUrl = ipUrl;
             try {
-                lastQrBitmap = QrCodeGenerator.generateBitmap(webUrl, dp(180), Color.parseColor("#111318"), Color.WHITE);
+                lastQrBitmap = QrCodeGenerator.generateBitmap(ipUrl, dp(180), Color.parseColor("#111318"), Color.WHITE);
                 qrImageView.setImageBitmap(lastQrBitmap);
             } catch (Exception ignored) {
             }

@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 public final class TransferService extends Service {
 
     private static final String TAG = "FotosPixel";
+    public static final int PREFERRED_PORT = 80;
     public static final int PORT = 8080;
     public static final String ACTION_START = "com.fotospixel.transfer.START";
     public static final String ACTION_STOP = "com.fotospixel.transfer.STOP";
@@ -69,6 +70,7 @@ public final class TransferService extends Service {
     private final TransferStats stats = TransferStats.getInstance();
     private final FileOpMonitor fileOps = FileOpMonitor.getInstance();
     private TransferServer server;
+    private LocalDnsResponder dnsResponder;
     private ScheduledExecutorService ticker;
     private PowerManager.WakeLock wakeLock;
     private WifiManager.WifiLock wifiLock;
@@ -199,7 +201,8 @@ public final class TransferService extends Service {
         stats.setCredentials(user, pass);
 
         String ip = getLocalWifiIp();
-        stats.setServerState(true, ip, PORT);
+        int curPort = (server != null && server.isRunning()) ? server.getBoundPort() : stats.getServerPort();
+        stats.setServerState(true, ip, curPort);
         Notification notif = buildNotification(ip, stats.getActiveTransfers());
         logLiveUpdateCapabilities(notif);
 
@@ -220,6 +223,11 @@ public final class TransferService extends Service {
     private synchronized void restartServer(String user, String pass) {
         if (stopping) return;
         Log.i(TAG, "Restarting TransferServer (user=" + (user.isEmpty() ? "<open>" : user) + ")");
+        if (dnsResponder != null) {
+            dnsResponder.stop();
+            dnsResponder = null;
+        }
+        stats.setLocalHost("");
         if (server != null) {
             server.stop();
             server = null;
@@ -239,10 +247,19 @@ public final class TransferService extends Service {
         if (server == null || !server.isRunning()) {
             try {
                 stats.setCredentials(user, pass);
-                server = new TransferServer(this, PORT, user, pass);
+                server = new TransferServer(this, PREFERRED_PORT, user, pass);
                 server.start();
+                int activePort = server.getBoundPort();
                 String ip = getLocalWifiIp();
-                stats.setServerState(true, ip, PORT);
+                stats.setServerState(true, ip, activePort);
+                if (dnsResponder == null) {
+                    dnsResponder = new LocalDnsResponder(this);
+                }
+                dnsResponder.start(ip, activePort, host -> {
+                    stats.setLocalHost(host);
+                    lastNotifSummary = "";
+                    notifyStateChangedIfRunning();
+                });
                 acquireLocks();
             } catch (IOException e) {
                 Log.e(TAG, "Failed to start TransferServer", e);
@@ -277,7 +294,11 @@ public final class TransferService extends Service {
                         String ip = getLocalWifiIp();
                         boolean running = server != null && server.isRunning();
                         if (!running) return;
-                        stats.setServerState(true, ip, PORT);
+                        int activePort = server.getBoundPort();
+                        stats.setServerState(true, ip, activePort);
+                        if (dnsResponder != null) {
+                            dnsResponder.updateIpIfChanged(ip);
+                        }
                         List<TransferStats.ActiveTransfer> actives = stats.getActiveTransfers();
                         List<FileOpMonitor.ActiveFileOp> ops = fileOps.getActiveOps();
                         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -327,6 +348,11 @@ public final class TransferService extends Service {
             ticker.shutdownNow();
             ticker = null;
         }
+        if (dnsResponder != null) {
+            dnsResponder.stop();
+            dnsResponder = null;
+        }
+        stats.setLocalHost("");
         if (server != null) {
             server.stop();
             server = null;
@@ -633,8 +659,12 @@ public final class TransferService extends Service {
             chipText = "Elim " + (indeterminate ? (delOp.itemsDone.get() + "") : (progressPct + "%"));
         } else {
             String u = stats.getAuthUser();
+            int activePort = stats.getServerPort();
+            String host = stats.getLocalHost();
+            String primaryUrl = LocalDnsResponder.formatHttpUrl(
+                    (host == null || host.isEmpty()) ? ip : host, activePort);
             title = "Expressive Web Files";
-            text = "Portal Web · http://" + ip + ":" + PORT;
+            text = "Portal Web · " + primaryUrl;
             subText = u.isEmpty() ? "Acceso abierto (sin contraseña)" : ("Usuario web: " + u);
             chipText = "Activo";
         }
@@ -712,10 +742,19 @@ public final class TransferService extends Service {
                 b.addAction(new Notification.Action.Builder(powerActionIcon, "Apagar servidor", stopPi).build());
             } else {
                 String u = stats.getAuthUser();
+                int activePort = stats.getServerPort();
+                String host = stats.getLocalHost();
+                String friendlyUrl = LocalDnsResponder.formatHttpUrl(host, activePort);
+                String ipUrl = LocalDnsResponder.formatHttpUrl(ip, activePort);
                 b.setContentTitle("Expressive Web Files · En línea");
                 big.setBigContentTitle("Expressive Web Files · Servidor activo");
                 StringBuilder body = new StringBuilder();
-                body.append("Portal Web: http://").append(ip).append(':').append(PORT).append('\n');
+                if (!friendlyUrl.isEmpty()) {
+                    body.append("Portal Web: ").append(friendlyUrl).append('\n');
+                    body.append("IP alternativa: ").append(ipUrl).append('\n');
+                } else {
+                    body.append("Portal Web: ").append(ipUrl).append('\n');
+                }
                 body.append("Acceso: ").append(u.isEmpty() ? "Abierto (sin contraseña)" : ("Usuario \"" + u + "\"")).append('\n');
                 body.append("Sesión: ↑ ").append(TransferStats.formatBytes(stats.getTotalUploadBytes()))
                         .append(" · ↓ ").append(TransferStats.formatBytes(stats.getTotalDownloadBytes())).append('\n');
@@ -946,6 +985,11 @@ public final class TransferService extends Service {
             ticker.shutdownNow();
             ticker = null;
         }
+        if (dnsResponder != null) {
+            dnsResponder.stop();
+            dnsResponder = null;
+        }
+        stats.setLocalHost("");
         if (server != null) {
             server.stop();
             server = null;

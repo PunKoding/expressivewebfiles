@@ -102,7 +102,7 @@ else
   "$ROOT_DIR/build.sh" --history --no-install
 fi
 
-RELEASE_DIR="$ROOT_DIR/apks/releases"
+RELEASE_DIR="$ROOT_DIR/apks/releases/v${NEW_VER}"
 mkdir -p "$RELEASE_DIR"
 
 APK_NAME="expressivewebfiles-v${NEW_VER}.apk"
@@ -154,9 +154,9 @@ echo ""
 echo "=================================================================="
 echo "Release v${NEW_VER} listo para publicar en GitHub"
 echo "=================================================================="
-echo "APK Release : apks/releases/${APK_NAME}"
-echo "SHA-256     : apks/releases/${APK_NAME}.sha256"
-echo "Notas       : apks/releases/expressivewebfiles-v${NEW_VER}.notes.md"
+echo "APK Release : apks/releases/v${NEW_VER}/${APK_NAME}"
+echo "SHA-256     : apks/releases/v${NEW_VER}/${APK_NAME}.sha256"
+echo "Notas       : apks/releases/v${NEW_VER}/expressivewebfiles-v${NEW_VER}.notes.md"
 echo ""
 echo "Siguientes pasos:"
 echo "  1. Haz commit y push de los cambios (incluido VERSION y AndroidManifest.xml) desde GitHub Desktop."

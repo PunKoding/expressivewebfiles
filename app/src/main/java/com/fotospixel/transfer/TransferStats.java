@@ -165,6 +165,7 @@ public final class TransferStats {
     private volatile boolean serverRunning = false;
     private volatile String serverIp = "0.0.0.0";
     private volatile int serverPort = 8080;
+    private volatile String localHost = "";
     private volatile String authUser = "pixel";
     private volatile String authPass = "pixel";
     private volatile Runnable onStateChangedListener;
@@ -221,6 +222,14 @@ public final class TransferStats {
 
     public int getServerPort() {
         return serverPort;
+    }
+
+    public void setLocalHost(String host) {
+        this.localHost = (host == null) ? "" : host;
+    }
+
+    public String getLocalHost() {
+        return localHost;
     }
 
     public ActiveTransfer beginTransfer(String fileName, String folder, String direction, String protocol, long totalBytes) {
@@ -391,6 +400,7 @@ public final class TransferStats {
         sb.append("\"serverRunning\":").append(serverRunning).append(',');
         sb.append("\"ip\":\"").append(escapeJson(ip)).append("\",");
         sb.append("\"port\":").append(port).append(',');
+        sb.append("\"localHost\":\"").append(escapeJson(localHost)).append("\",");
         sb.append("\"authEnabled\":").append(!authUser.isEmpty()).append(',');
         sb.append("\"authUser\":\"").append(escapeJson(authUser)).append("\",");
         sb.append("\"deviceModel\":\"").append(escapeJson(deviceModel)).append("\",");

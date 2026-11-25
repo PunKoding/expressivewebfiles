@@ -1106,9 +1106,10 @@ public final class WebUi {
         "    if (!r.ok) throw new Error('HTTP ' + r.status);\n" +
         "    const s = await r.json();\n" +
         "    if (s.theme) applyTheme(s.theme);\n" +
-        "    const urlStr = 'http://' + s.ip + ':' + s.port;\n" +
-        "    document.getElementById('devInfo').textContent = s.deviceModel + ' · ' + urlStr;\n" +
-        "    document.getElementById('settingsUrl').textContent = urlStr;\n" +
+        "    const ipUrl = (s.port === 80) ? ('http://' + s.ip) : ('http://' + s.ip + ':' + s.port);\n" +
+        "    const urlStr = s.localHost ? ((s.port === 80) ? ('http://' + s.localHost) : ('http://' + s.localHost + ':' + s.port)) : ipUrl;\n" +
+        "    document.getElementById('devInfo').textContent = s.deviceModel + ' · ' + urlStr + (s.localHost ? (' (' + ipUrl + ')') : '');\n" +
+        "    document.getElementById('settingsUrl').textContent = urlStr + (s.localHost ? (' · IP: ' + ipUrl) : '');\n" +
         "    if (s.appVersion) document.getElementById('webVersionFooter').textContent = 'Expressive Web Files · v' + s.appVersion;\n" +
         "    const pill = document.getElementById('connPill');\n" +
         "    pill.classList.toggle('offline', !s.serverRunning);\n" +
