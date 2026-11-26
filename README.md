@@ -5,6 +5,8 @@
 ![Build System](https://img.shields.io/badge/Build-Sin%20Gradle%20(aapt2%20%2B%20javac%20%2B%20d8)-4285F4)
 ![Idiomas](https://img.shields.io/badge/Idiomas-ES%20%C2%B7%20EN%20%C2%B7%20DE%20%C2%B7%20FR%20%C2%B7%20JA%20%C2%B7%20ZH-6750A4)
 
+Hecho completamente con inteligencia artificial. :(
+
 **Expressive Web Files** es una aplicación Android ligera y sin dependencias externas que combina en una sola herramienta:
 
 1. **Portal Web LAN de alta velocidad con URL amigable (`<marca>.files.local`)** para enviar y recibir archivos y carpetas completas desde cualquier navegador en la misma red Wi-Fi sin necesidad de memorizar la IP.
